@@ -69,6 +69,7 @@ def add_args(parser):
                         help="Linear warmup over warmup_steps.")
     parser.add_argument("--batch_size", default=8, type=int,
                         help="Batch size per GPU/CPU for training.")
+    parser.add_argument("--struc_loss_type", type=str, default='wasserstein')
     args = parser.parse_args()
     return args
 
@@ -132,7 +133,7 @@ def set_hyperparas(args):
             args.batch_size = 128 # A100
             # args.batch_size = 48 # V100
             args.is_sl = True
-            args.data_num = 1000
+            # args.data_num = 1000
         elif args.model_name in ['unixcoder-sl']:
             args.batch_size = 128 # A100
             # args.batch_size = 48 # V100

@@ -2,10 +2,12 @@ import torch.nn as nn
 import torch
 import torch.nn.functional as F
 import numpy as np
+import logging
 
 from transformers import AutoTokenizer, AutoModel, AutoConfig, T5ForConditionalGeneration, BartForConditionalGeneration
+from geomloss import SamplesLoss
+from utils import format_attention
 
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -31,18 +33,29 @@ MODEL_LOCALS = {
 }
 
 
-def calculate_attention_difference(model_attention, struc_attention, loss=None, args=None):
-    model_attention_selected = model_attention[-1]  # choose the attention of last layer
-    print('model_attention shape', model_attention.shape)
-    print('model_attention_selected shape', model_attention_selected.shape)
-    print('struc_attention shape', struc_attention.shape)
-    return 
+def calculate_attention_difference(model_attention, struc_attention, struc_loss_type=None):
+    # model_attention_selected = model_attention[-1]  # choose the attention of last layer
+    # print('model_attention', model_attention.shape)
+    # model_attention:  Tuple of torch.FloatTensor (one for each layer) of shape (batch_size, num_heads, sequence_length, sequence_length).
+    model_attention_selected = format_attention(model_attention, layers=0, heads=1)  # notice: head must > 0
+    model_attention_selected = model_attention_selected.squeeze(dim=1) # remove dimension for layers
+    model_attention_selected = model_attention_selected.squeeze(dim=1) # remove dimension for heads
+    struc_attention = struc_attention.squeeze(dim=-1)
+    # print('model_attention_selected shape', model_attention_selected.shape)
+    # print('struc_attention shape', struc_attention.shape)
+    matrix_size = struc_attention.shape[-1]
+    if struc_loss_type == 'wasserstein':
+        LOSS = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
+        loss = LOSS(model_attention_selected, struc_attention)
+        loss = loss.sum() / (matrix_size * matrix_size)
+        # print('loss shape', loss.shape, ', loss', loss)
+    return loss
     
     
 class StrucEncoder(nn.Module):
     def __init__(self, args=None):
         super(StrucEncoder, self).__init__()
-        self.fc = nn.Linear(256, 1)
+        self.fc = nn.Linear(1, 1)
         
     def forward(self, struc_feat):
         output = self.fc(struc_feat)
@@ -109,7 +122,6 @@ def bulid_or_load_gen_model(args):
             encoder=encoder, decoder=decoder, struc_encoder=struc_encoder, config=config, 
             beam_size=args.beam_size, max_length=args.max_target_length,
             sos_id=tokenizer.cls_token_id, eos_id=tokenizer.sep_token_id,
-            calc_attn_diff=calculate_attention_difference
             )
     
     logger.info("Finish loading model [%s] parameters from %s", get_model_size(
@@ -246,13 +258,12 @@ class Seq2SeqWithSL(nn.Module):
         * `eos_id`- end of symbol ids in target for beam search.
     """
 
-    def __init__(self, encoder, decoder, config, struc_encoder=None, calc_attn_diff=None, beam_size=None, max_length=None, sos_id=None, eos_id=None):
+    def __init__(self, encoder, decoder, config, struc_encoder=None, beam_size=None, max_length=None, sos_id=None, eos_id=None):
         super(Seq2SeqWithSL, self).__init__()
         self.encoder = encoder
         self.decoder = decoder
         self.config = config
         self.struc_encoder = struc_encoder
-        self.calc_attn_diff = calc_attn_diff
         self.register_buffer("bias", torch.tril(torch.ones(2048, 2048)))
         self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         self.lm_head = nn.Linear(
@@ -281,6 +292,10 @@ class Seq2SeqWithSL(nn.Module):
                                    self.encoder.embeddings.word_embeddings)
 
     def forward(self, source_ids=None, source_mask=None, target_ids=None, target_mask=None, args=None, sl_feats=None):
+        if sl_feats is not None:
+            # print('before sl_feats shape', sl_feats.shape)
+            sl_feats = sl_feats.view(source_ids.shape[0], args.max_source_length, args.max_source_length, -1)
+            # print('after sl_feats shape', sl_feats.shape)
         outputs = self.encoder(source_ids, attention_mask=source_mask)
         encoder_attention = outputs[-1]
         encoder_output = outputs[0].permute([1, 0, 2]).contiguous()
@@ -303,9 +318,15 @@ class Seq2SeqWithSL(nn.Module):
             loss_fct = nn.CrossEntropyLoss(ignore_index=-1)
             loss = loss_fct(shift_logits.view(-1, shift_logits.size(-1))[active_loss],
                             shift_labels.view(-1)[active_loss])
-            struc_attention = self.struc_encoder(sl_feats)
-            struc_loss = self.calc_attn_diff(encoder_attention, struc_attention)
-            loss_all = struc_loss + loss
+            if sl_feats is not None:
+                struc_attention = self.struc_encoder(sl_feats)
+                struc_loss = calculate_attention_difference(encoder_attention, struc_attention, struc_loss_type=args.struc_loss_type)
+                # print('raw loss', loss)
+                # print('struc loss', struc_loss)
+                # print('struc loss sum', struc_loss.sum())
+                loss_all = struc_loss / 1e4 + loss
+            else:
+                loss_all = loss
             return loss_all, loss * active_loss.sum(), active_loss.sum(), encoder_attention
         else:
             # Predict

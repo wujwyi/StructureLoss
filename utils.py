@@ -79,7 +79,11 @@ def convert_examples_to_features(item):
 
 
 def convert_one_examples_to_features_with_sl(example, tokenizer, example_index, stage, args):
-    sl_file = './data/summarize-idx/{}/{}/{}/{}.pt'.format(args.lang, args.model_name, stage, example_index) # load the preprocessed features (pt)
+    if args.model_name in ['codebert-sl', 'roberta-sl', 'graphcodebert-sl']:
+        model_name = 'codebert-sl'
+    else:
+        model_name = args.model_name
+    sl_file = './data/summarize-idx/{}/{}/{}/{}.pt'.format(args.lang, model_name, stage, example_index) # load the preprocessed features (pt)
     sl_feats = torch.load(sl_file)
     if args.model_name in ['t5', 'codet5'] and args.add_task_prefix:
         if args.sub_task != 'none':
@@ -141,8 +145,11 @@ class SummarizeDataset():
             example_index=index,
             stage=self.stage,
             args=self.args,
-        )
+        )    
         source_ids = torch.tensor(input_features.source_ids, dtype=torch.long)
+        # print('source_ids shape', source_ids.shape)
+        # print('target_ids shape', target_ids.shape)
+        # print('sl_feats shape', input_features.sl_feats.shape)
         if self.stage == 'test' or self.only_src:
             return source_ids, input_features.sl_feats
         else:
@@ -820,6 +827,7 @@ def format_attention(attention, layers=None, heads=None):
 
         if heads:
             layer_attention = layer_attention[heads]
+            layer_attention = layer_attention.unsqueeze(0)
         squeezed.append(layer_attention)
     # num_layers x num_heads x batch_size x seq_len x seq_len
     return torch.stack(squeezed).permute((2, 0, 1, 3, 4))
@@ -851,3 +859,5 @@ def index_to_code_token(index, code):
             s += code[i]
         s += code[end_point[0]][:end_point[1]]
     return s
+
+

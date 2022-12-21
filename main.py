@@ -45,10 +45,11 @@ def eval_ppl_epoch(args, eval_data, eval_examples, model, tokenizer):
         target_mask = target_ids.ne(tokenizer.pad_token_id)
 
         with torch.no_grad():
-            if args.model_name in ['roberta', 'codebert', 'graphcodebert']:
+            if args.model_name in ['roberta', 'codebert', 'graphcodebert', 'roberta-sl',
+                                   'codebert-sl', 'graphcodebert-sl']:
                 loss, _, _, _ = model(source_ids=source_ids, source_mask=source_mask,
                                       target_ids=target_ids, target_mask=target_mask)
-            elif args.model_name in ['unixcoder']:
+            elif args.model_name in ['unixcoder', 'unixcoder-sl']:
                 loss, _, _, _ = model(source_ids=source_ids,target_ids=target_ids)
             else:
                 outputs = model(input_ids=source_ids, attention_mask=source_mask,
@@ -82,12 +83,13 @@ def eval_bleu_epoch(args, eval_data, eval_examples, model, tokenizer, split_tag,
         source_ids = batch[0].to(args.device)
         source_mask = source_ids.ne(tokenizer.pad_token_id)
         with torch.no_grad():
-            if args.model_name in ['roberta', 'codebert', 'graphcodebert']:
+            if args.model_name in ['roberta', 'codebert', 'graphcodebert', 'roberta-sl',
+                                   'codebert-sl', 'graphcodebert-sl']:
                 preds, _ = model(source_ids=source_ids,
                                  source_mask=source_mask)
 
                 top_preds = [pred[0].cpu().numpy() for pred in preds]
-            elif args.model_name in ['unixcoder']:
+            elif args.model_name in ['unixcoder', 'unixcoder-sl']:
                 preds, _ = model(source_ids=source_ids)
                 top_preds = [pred[0].cpu().numpy() for pred in preds]
             else:
@@ -269,7 +271,7 @@ def main():
                 elif args.model_name in ['roberta-sl', 'codebert-sl', 'graphcodebert-sl']:
                     loss, _, _, _ = model(source_ids=source_ids, source_mask=source_mask,
                                           target_ids=target_ids, target_mask=target_mask,
-                                          sl_feats=sl_feats)
+                                          sl_feats=sl_feats, args=args)
 
                 if args.n_gpu > 1:
                     loss = loss.mean()  # mean() to average on multi-gpu.
@@ -366,7 +368,7 @@ def main():
                     result = eval_bleu_epoch(
                         args, eval_data, eval_examples, model, tokenizer, 'dev', 'e%d' % cur_epoch)
                     dev_bleu, dev_em = result['bleu'], result['em']
-                    if args.task in ['summarize']:
+                    if args.task in ['summarize', 'summarize-idx']:
                         dev_bleu_em = dev_bleu
                     elif args.task in ['defect']:
                         dev_bleu_em = dev_em
