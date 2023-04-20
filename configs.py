@@ -16,7 +16,7 @@ def add_args(parser):
     # plbart unfinished
     parser.add_argument("--model_name", default="roberta",
                         type=str, choices=['roberta', 'codebert', 'graphcodebert', 'bart', 'plbart', 't5', 'codet5', 'unixcoder',
-                                           'roberta-sl', 'codebert-sl', 'graphcodebert-sl', 'unixcoder-sl'])
+                                           'roberta-sl', 'codebert-sl', 'graphcodebert-sl', 'unixcoder-sl', 'codet5-sl'])
     parser.add_argument('--seed', type=int, default=1234,
                         help="random seed for initialization")  # previous one 42
     parser.add_argument("--local_rank", type=int, default=-1,
@@ -46,8 +46,9 @@ def add_args(parser):
                         help="Whether to run eval on the test set.")
     parser.add_argument("--add_task_prefix", action='store_true',
                         help="Whether to add task prefix for t5 and codet5")
-    parser.add_argument("--save_last_checkpoints", action='store_true')
+    parser.add_argument("--save_last_checkpoints", type=int, default=0)
     parser.add_argument("--always_save_model", action='store_true')
+    parser.add_argument("--always_remove_model", type=int, default=1)
     parser.add_argument("--do_eval_bleu", action='store_true',
                         help="Whether to evaluate bleu on dev set.")
     parser.add_argument("--start_epoch", default=0, type=int)
@@ -70,6 +71,10 @@ def add_args(parser):
     parser.add_argument("--batch_size", default=8, type=int,
                         help="Batch size per GPU/CPU for training.")
     parser.add_argument("--struc_loss_type", type=str, default='wasserstein')
+    parser.add_argument("--alpha", type=float, default=1e-4,
+                        help='Parameter to balance structure loss')
+    parser.add_argument("--use_sumppl_in_struc_eval", action='store_true')
+    parser.add_argument("--multi_head_loss", type=int, default=0)
     args = parser.parse_args()
     return args
 
@@ -110,7 +115,7 @@ def set_hyperparas(args):
         args.lr = 5e-5
         args.max_source_length = 256
         args.max_target_length = 128
-        args.num_train_epochs = 100 
+        args.num_train_epochs = 100
         # args.num_train_epochs = 15 # will not early stop on some datasets if the number of training epochs is too small
         args.patience = 2
         args.weight_decay = 0.0
@@ -118,29 +123,27 @@ def set_hyperparas(args):
         args.lang = args.sub_task
 
         if args.model_name in ['roberta', 'codebert', 'graphcodebert']:
-            args.batch_size = 128 # A100
-            # args.batch_size = 48 # V100
+            # args.batch_size = 128 # A100
+            args.batch_size = 48  # V100
         elif args.model_name in ['t5', 'codet5']:
-            args.batch_size = 64 # A100
-            # args.batch_size = 32
+            # args.batch_size = 64 # A100
+            args.batch_size = 32
         elif args.model_name in ['bart', 'plbart']:
-            args.batch_size = 128 # A100
-            # args.batch_size = 48 # V100
+            # args.batch_size = 128 # A100
+            args.batch_size = 48  # V100
         elif args.model_name in ['unixcoder']:
-            args.batch_size = 128 # A100
-            # args.batch_size = 48 # V100
+            # args.batch_size = 128 # A100
+            args.batch_size = 48  # V100
         elif args.model_name in ['roberta-sl', 'codebert-sl', 'graphcodebert-sl']:
-            args.batch_size = 128 # A100
-            # args.batch_size = 48 # V100
+            # args.batch_size = 128 # A100
+            args.batch_size = 48  # V100
             args.is_sl = True
             # args.data_num = 1000
         elif args.model_name in ['unixcoder-sl']:
-            args.batch_size = 128 # A100
-            # args.batch_size = 48 # V100
+            # args.batch_size = 128 # A100
+            args.batch_size = 48  # V100
             args.is_sl = True
-            
-        
-    
+
     elif args.task == 'translate':
         args.adam_epsilon = 1e-8
         args.beam_size = 10
@@ -152,21 +155,21 @@ def set_hyperparas(args):
         args.patience = 2
         args.weight_decay = 0.0
         args.warmup_steps = 1000
-        
+
         if args.sub_task == 'java-cs':
             args.lang = 'c_sharp'
         elif args.sub_task == 'cs-java':
             args.lang = 'java'
-        
+
         if args.model_name in ['roberta', 'codebert', 'graphcodebert']:
-            args.batch_size = 128 # A100
+            args.batch_size = 128  # A100
             # args.batch_size = 48 # V100
         elif args.model_name in ['t5', 'codet5']:
-            args.batch_size = 64 # A100
+            args.batch_size = 64  # A100
             # args.batch_size = 32
         elif args.model_name in ['bart', 'plbart']:
-            args.batch_size = 128 # A100
+            args.batch_size = 128  # A100
             # args.batch_size = 48 # V100
         elif args.model_name in ['unixcoder']:
-            args.batch_size = 128 # A100
+            args.batch_size = 128  # A100
             # args.batch_size = 48 # V100

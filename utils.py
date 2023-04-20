@@ -83,7 +83,9 @@ def convert_one_examples_to_features_with_sl(example, tokenizer, example_index, 
         model_name = 'codebert-sl'
     else:
         model_name = args.model_name
-    sl_file = './data/summarize-idx/{}/{}/{}/{}.pt'.format(args.lang, model_name, stage, example_index) # load the preprocessed features (pt)
+    # load the preprocessed features (pt)
+    sl_file = '{}/summarize-idx/{}/{}/{}/{}.pt'.format(args.data_dir,
+        args.lang, model_name, stage, example_index)
     sl_feats = torch.load(sl_file)
     if args.model_name in ['t5', 'codet5'] and args.add_task_prefix:
         if args.sub_task != 'none':
@@ -117,13 +119,13 @@ def convert_one_examples_to_features_with_sl(example, tokenizer, example_index, 
                                       truncation=True)
         assert target_ids.count(tokenizer.eos_token_id) == 1
 
-    return InputFeatures(
-        example_index,
-        source_ids,
-        target_ids,
-        url=example.url,
-        sl_feats=sl_feats,
-    )
+        return InputFeatures(
+            example_index,
+            source_ids,
+            target_ids,
+            url=example.url,
+            sl_feats=sl_feats,
+        )
 
 
 class SummarizeDataset():
@@ -133,8 +135,8 @@ class SummarizeDataset():
         self.args = args
         self.stage = stage
         self.only_src = only_src
-        
-    def __len__(self):       
+
+    def __len__(self):
         return len(self.examples)
 
     def __getitem__(self, index):
@@ -145,7 +147,7 @@ class SummarizeDataset():
             example_index=index,
             stage=self.stage,
             args=self.args,
-        )    
+        )
         source_ids = torch.tensor(input_features.source_ids, dtype=torch.long)
         # print('source_ids shape', source_ids.shape)
         # print('target_ids shape', target_ids.shape)
@@ -153,9 +155,9 @@ class SummarizeDataset():
         if self.stage == 'test' or self.only_src:
             return source_ids, input_features.sl_feats
         else:
-            target_ids = torch.tensor(input_features.target_ids, dtype=torch.long)
+            target_ids = torch.tensor(
+                input_features.target_ids, dtype=torch.long)
             return source_ids, target_ids, input_features.sl_feats
-            
 
 
 def convert_clone_examples_to_features(item):
@@ -428,7 +430,7 @@ def load_and_cache_gen_data(args, filename, pool, tokenizer, split_tag, only_src
         tuple_examples = [(example, idx, tokenizer, args, split_tag)
                           for idx, example in enumerate(examples)]
         features = pool.map(convert_examples_to_features, tqdm(
-                tuple_examples, total=len(tuple_examples)))
+            tuple_examples, total=len(tuple_examples)))
         all_source_ids = torch.tensor(
             [f.source_ids for f in features], dtype=torch.long)
         if split_tag == 'test' or only_src:
@@ -796,7 +798,7 @@ def get_ast_nx(example, parser, lang):
     )
 
 
-def format_attention(attention, layers=None, heads=None):
+def format_attention(attention, heads, layers=None):
     """[format attention whose batch size > 1]
 
     Args:
@@ -825,9 +827,9 @@ def format_attention(attention, layers=None, heads=None):
         # num_heads x batch_size x seq_len x seq_len
         layer_attention = layer_attention.permute((1, 0, 2, 3))
 
-        if heads:
-            layer_attention = layer_attention[heads]
-            layer_attention = layer_attention.unsqueeze(0)
+
+        layer_attention = layer_attention[heads]
+        layer_attention = layer_attention.unsqueeze(0)
         squeezed.append(layer_attention)
     # num_layers x num_heads x batch_size x seq_len x seq_len
     return torch.stack(squeezed).permute((2, 0, 1, 3, 4))
@@ -859,5 +861,3 @@ def index_to_code_token(index, code):
             s += code[i]
         s += code[end_point[0]][:end_point[1]]
     return s
-
-

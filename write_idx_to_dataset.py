@@ -39,7 +39,7 @@ def read_summarize_examples(filename, data_num):
 
 def main():
     tasks = ['summarize']
-    origin_root = './data'
+    origin_root = '/mnt/e/data'
     for task in tasks:
         if task == 'summarize':
             langs = ['java', 'go', 'javascript', 'php', 'python', 'ruby']

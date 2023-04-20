@@ -12,17 +12,25 @@ from tree_sitter import Language, Parser
 sys.setrecursionlimit(5000)
 
 
-HUGGINGFACE_LOCALS = '/home/hadoop-aipnlp/dolphinfs/hdd_pool/data/zhurenyu/huggingface-models/'
-MODEL_LOCALS = {
-    'roberta': HUGGINGFACE_LOCALS + 'roberta-base',
-    'codebert':  HUGGINGFACE_LOCALS + 'codebert-base',
-    'graphcodebert':  HUGGINGFACE_LOCALS + 'graphcodebert-base',
-    't5':  HUGGINGFACE_LOCALS + 't5-base',
-    'codet5':  HUGGINGFACE_LOCALS + 'codet5-base',
-    'bart':  HUGGINGFACE_LOCALS + 'bart-base',
-    'plbart':  HUGGINGFACE_LOCALS + 'plbart-base',
-    'unixcoder': HUGGINGFACE_LOCALS + 'unixcoder-base',
-}
+MODEL_CHECKPOINTS = {'roberta': 'roberta-base',
+                     'codebert': 'microsoft/codebert-base',
+                     'graphcodebert': 'microsoft/graphcodebert-base',
+                     't5': 't5-base',
+                     'codet5': 'Salesforce/codet5-base',
+                     'bart': 'facebook/bart-base',
+                     'plbart': 'uclanlp/plbart-base'}
+
+# HUGGINGFACE_LOCALS = '/home/hadoop-aipnlp/dolphinfs/hdd_pool/data/zhurenyu/huggingface-models/'
+# MODEL_LOCALS = {
+#     'roberta': HUGGINGFACE_LOCALS + 'roberta-base',
+#     'codebert':  HUGGINGFACE_LOCALS + 'codebert-base',
+#     'graphcodebert':  HUGGINGFACE_LOCALS + 'graphcodebert-base',
+#     't5':  HUGGINGFACE_LOCALS + 't5-base',
+#     'codet5':  HUGGINGFACE_LOCALS + 'codet5-base',
+#     'bart':  HUGGINGFACE_LOCALS + 'bart-base',
+#     'plbart':  HUGGINGFACE_LOCALS + 'plbart-base',
+#     'unixcoder': HUGGINGFACE_LOCALS + 'unixcoder-base',
+# }
 
 
 def get_subtokens(source_code, tokenizer, max_length):
@@ -98,9 +106,14 @@ def get_subtoken_map_token(token_map_dict):
     return subtoken_map_dict
 
 
-def generate_ast_dis(filename, tokenizer, args):
+def generate_ast_dis(filename, tokenizer, args): 
     data_all = read_summarize_examples(filename=filename, data_num=-1)
-    target_dir = filename.replace('.jsonl', '/')
+    if 'train' in filename:
+        target_dir = filename.replace('train.jsonl', '{}/train/'.format(args.model_name + '-sl'))
+    elif 'valid' in filename:
+        target_dir = filename.replace('valid.jsonl', '{}/valid/'.format(args.model_name + '-sl'))
+    else:
+        target_dir = filename.replace('test.jsonl', '{}/test/'.format(args.model_name + '-sl'))
     print('target_dir', target_dir)
     max_length = args.max_length
     if not os.path.exists(target_dir):
@@ -138,10 +151,11 @@ def main():
     if args.task == 'summarize-idx':
         args.lang = args.sub_task
     
-    checkpoint = MODEL_LOCALS[args.model_name]
+    checkpoint = MODEL_CHECKPOINTS[args.model_name]
     tokenizer = AutoTokenizer.from_pretrained(checkpoint)
     
-    filenames = get_filenames(data_root='./data', task=args.task, sub_task=args.sub_task)
+    filenames = get_filenames(data_root='/mnt/e/data',
+                              task=args.task, sub_task=args.sub_task)
     print('filenames', filenames)    
     for fn in filenames:
         generate_ast_dis(filename=fn, tokenizer=tokenizer, args=args)

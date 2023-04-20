@@ -37,7 +37,7 @@ def eval_ppl_epoch(args, eval_data, eval_examples, model, tokenizer):
     logger.info("  Batch size = %d", args.batch_size)
 
     model.eval()
-    eval_loss, batch_num = 0, 0
+    eval_loss, eval_struc_loss, batch_num = 0, 0, 0
     for batch in tqdm(eval_dataloader, total=len(eval_dataloader), desc="Eval ppl"):
         batch = tuple(t.to(args.device) for t in batch)
         source_ids, target_ids = batch
@@ -47,20 +47,27 @@ def eval_ppl_epoch(args, eval_data, eval_examples, model, tokenizer):
         with torch.no_grad():
             if args.model_name in ['roberta', 'codebert', 'graphcodebert', 'roberta-sl',
                                    'codebert-sl', 'graphcodebert-sl']:
-                loss, _, _, _ = model(source_ids=source_ids, source_mask=source_mask,
-                                      target_ids=target_ids, target_mask=target_mask)
+                loss, struc_loss, _, _, _ = model(source_ids=source_ids, source_mask=source_mask,
+                                                  target_ids=target_ids, target_mask=target_mask)
             elif args.model_name in ['unixcoder', 'unixcoder-sl']:
-                loss, _, _, _ = model(source_ids=source_ids,target_ids=target_ids)
+                loss, _, _, _ = model(
+                    source_ids=source_ids, target_ids=target_ids)
+                struc_loss = torch.tensor(0.0, device=loss.device)
+
             else:
                 outputs = model(input_ids=source_ids, attention_mask=source_mask,
                                 labels=target_ids, decoder_attention_mask=target_mask)
                 loss = outputs.loss
+                struc_loss = torch.tensor(0.0, device=loss.device)
 
         eval_loss += loss.item()
+        eval_struc_loss += struc_loss.item()
         batch_num += 1
     eval_loss = eval_loss / batch_num
+    eval_struc_loss = eval_struc_loss / batch_num
     eval_ppl = round(np.exp(eval_loss), 5)
-    return eval_ppl
+    eval_struc_ppl = round(np.exp(eval_struc_loss), 5)
+    return eval_ppl, eval_struc_ppl
 
 
 def eval_bleu_epoch(args, eval_data, eval_examples, model, tokenizer, split_tag, criteria):
@@ -126,7 +133,7 @@ def eval_bleu_epoch(args, eval_data, eval_examples, model, tokenizer, split_tag,
         with open(output_fn, 'w') as f, open(gold_fn, 'w') as f1, open(src_fn, 'w') as f2:
             for pred_nl, gold in zip(pred_nls, eval_examples):
                 dev_accs.append(pred_nl.strip() == gold.target.strip())
-                if args.task in ['summarize']:
+                if 'summarize' in args.task:
                     predictions.append(str(gold.idx) + '\t' + pred_nl)
                     f.write(str(gold.idx) + '\t' +
                             pred_nl.strip().encode('utf8').decode() + '\n')
@@ -141,13 +148,13 @@ def eval_bleu_epoch(args, eval_data, eval_examples, model, tokenizer, split_tag,
                     f2.write(gold.source.strip().encode(
                         'utf8').decode() + '\n')
 
-        if args.task in ['summarize']:
+        if 'summarize' in args.task:
             (goldMap, predictionMap) = smooth_bleu.computeMaps(predictions, gold_fn)
             bleu = round(smooth_bleu.bleuFromMaps(
                 goldMap, predictionMap)[0], 2)
         else:
             bleu = round(_bleu(gold_fn, output_fn), 2)
-            if split_tag == 'test' and args.task in ['refine', 'translate', 'concode']:
+            if split_tag == 'test' and 'translate' in args.task:
                 codebleu = calc_code_bleu.get_codebleu(
                     gold_fn, output_fn, args.lang)
         # except:
@@ -177,7 +184,7 @@ def main():
 
     logger.info(args)
 
-    if args.task in ['summarize', 'translate', 'summarize-idx', 'translate-idx']:
+    if 'summarize' in args.task or 'translate' in args.task:
         config, model, tokenizer = bulid_or_load_gen_model(args)
 
     model.to(args.device)
@@ -198,23 +205,26 @@ def main():
             # Prepare training data loader
             train_examples, train_data = load_and_cache_gen_data(
                 args, args.train_filename, pool, tokenizer, 'train')
-            train_sampler = RandomSampler(
-                train_data) if args.local_rank == -1 else DistributedSampler(train_data)
-            train_dataloader = DataLoader(train_data, sampler=train_sampler, batch_size=args.batch_size,
-                                        num_workers=4, pin_memory=True)
-        else:
-            train_examples = read_examples(args.train_filename, args.data_num, args.task)
-            train_data = SummarizeDataset(
-                examples=train_examples, 
-                tokenizer=tokenizer, 
-                args=args, 
-                stage='train', 
-                only_src=False
-            )
+            tmp = len(train_data)
             train_sampler = RandomSampler(
                 train_data) if args.local_rank == -1 else DistributedSampler(train_data)
             train_dataloader = DataLoader(train_data, sampler=train_sampler, batch_size=args.batch_size,
                                           num_workers=10, pin_memory=True)
+        else:
+            train_examples = read_examples(
+                args.train_filename, args.data_num, args.task)
+            train_data = SummarizeDataset(
+                examples=train_examples,
+                tokenizer=tokenizer,
+                args=args,
+                stage='train',
+                only_src=False
+            )
+            tmp = len(train_data)
+            train_sampler = RandomSampler(
+                train_data) if args.local_rank == -1 else DistributedSampler(train_data)
+            train_dataloader = DataLoader(train_data, sampler=train_sampler, batch_size=args.batch_size,
+                                          num_workers=4, pin_memory=True)
 
         # Prepare optimizer and schedule (linear warmup and decay)
         no_decay = ['bias', 'LayerNorm.weight']
@@ -248,7 +258,7 @@ def main():
         for cur_epoch in range(args.start_epoch, int(args.num_train_epochs)):
             bar = tqdm(train_dataloader, total=len(
                 train_dataloader), desc="Training")
-            nb_tr_examples, nb_tr_steps, tr_loss = 0, 0, 0
+            nb_tr_examples, nb_tr_steps, tr_loss, tr_struc_loss = 0, 0, 0, 0
             model.train()
             for step, batch in enumerate(bar):
                 batch = tuple(t.to(args.device) for t in batch)
@@ -260,24 +270,30 @@ def main():
                 target_mask = target_ids.ne(tokenizer.pad_token_id)
 
                 if args.model_name in ['roberta', 'codebert', 'graphcodebert']:
-                    loss, _, _, _ = model(source_ids=source_ids, source_mask=source_mask,
-                                          target_ids=target_ids, target_mask=target_mask)
+                    loss, struc_loss, _, _, _ = model(source_ids=source_ids, source_mask=source_mask,
+                                                      target_ids=target_ids, target_mask=target_mask)
                 elif args.model_name in ['unixcoder']:
-                    loss, _, _, _ = model(source_ids=source_ids, target_ids=target_ids)
+                    loss, _, _, _ = model(
+                        source_ids=source_ids, target_ids=target_ids)
                 elif args.model_name in ['codet5', 'plbart']:
                     outputs = model(input_ids=source_ids, attention_mask=source_mask,
                                     labels=target_ids, decoder_attention_mask=target_mask)
                     loss = outputs.loss
-                elif args.model_name in ['roberta-sl', 'codebert-sl', 'graphcodebert-sl']:
-                    loss, _, _, _ = model(source_ids=source_ids, source_mask=source_mask,
-                                          target_ids=target_ids, target_mask=target_mask,
-                                          sl_feats=sl_feats, args=args)
+                    struc_loss = torch.tensor(0.0, device=loss.device)
+                elif args.model_name in ['roberta-sl', 'codebert-sl', 'graphcodebert-sl','codet5-sl']:
+                    loss, struc_loss, _, _, _ = model(source_ids=source_ids, source_mask=source_mask,
+                                                      target_ids=target_ids, target_mask=target_mask,
+                                                      sl_feats=sl_feats, args=args)
+                    loss = loss + struc_loss * args.alpha
 
                 if args.n_gpu > 1:
                     loss = loss.mean()  # mean() to average on multi-gpu.
+                    struc_loss = struc_loss.mean()
                 if args.gradient_accumulation_steps > 1:
                     loss = loss / args.gradient_accumulation_steps
+                    struc_loss = struc_loss / args.gradient_accumulation_steps
                 tr_loss += loss.item()
+                tr_struc_loss += struc_loss.item()
 
                 nb_tr_examples += source_ids.size(0)
                 nb_tr_steps += 1
@@ -291,8 +307,10 @@ def main():
                     global_step += 1
                     train_loss = round(
                         tr_loss * args.gradient_accumulation_steps / (nb_tr_steps + 1), 4)
-                    bar.set_description("[{}] Train loss {}".format(
-                        cur_epoch, round(train_loss, 3)))
+                    train_struc_loss = round(
+                        tr_struc_loss * args.gradient_accumulation_steps / (nb_tr_steps + 1), 4)
+                    bar.set_description("[{}] Train loss {}, Train struc loss {}".format(
+                        cur_epoch, round(train_loss, 3), round(train_struc_loss, 3)))
 
             if args.do_eval:
                 # Eval model with dev dataset
@@ -303,15 +321,22 @@ def main():
                         args, args.dev_filename, pool, tokenizer, 'dev')
                     dev_dataset['dev_loss'] = eval_examples, eval_data
 
-                eval_ppl = eval_ppl_epoch(
+                eval_ppl, eval_struc_ppl = eval_ppl_epoch(
                     args, eval_data, eval_examples, model, tokenizer)
-                result = {'epoch': cur_epoch,
-                          'global_step': global_step, 'eval_ppl': eval_ppl}
+                eval_ppl_sum = eval_ppl + eval_struc_ppl * args.alpha
+                result = {'epoch': cur_epoch,  'global_step': global_step, 'train_loss:': train_loss,
+                          'train_struc_loss': train_struc_loss, 'eval_ppl': eval_ppl,
+                          'eval_struc_ppl': eval_struc_ppl, 'eval_ppl_sum': eval_ppl_sum}
                 for key in sorted(result.keys()):
                     logger.info("  %s = %s", key, str(result[key]))
                 logger.info("  " + "*" * 20)
                 if args.data_num == -1:
-                    tb_writer.add_scalar('dev_ppl', eval_ppl, cur_epoch)
+                    tb_writer.add_scalar('train_loss', train_loss, cur_epoch)
+                    tb_writer.add_scalar(
+                        'train_struc_loss', train_struc_loss, cur_epoch)
+                    tb_writer.add_scalar('dev_ppl', eval_ppl_sum, cur_epoch)
+                    tb_writer.add_scalar(
+                        'dev_struc_ppl', eval_struc_ppl, cur_epoch)
 
                 # save last checkpoint
                 if args.save_last_checkpoints:
@@ -326,6 +351,9 @@ def main():
                     torch.save(model_to_save.state_dict(), output_model_file)
                     logger.info("Save the last model into %s",
                                 output_model_file)
+
+                if args.use_sumppl_in_struc_eval:
+                    eval_ppl = eval_ppl_sum
 
                 if eval_ppl < best_ppl:
                     not_loss_dec_cnt = 0
@@ -441,6 +469,15 @@ def main():
                     f.write('[Time: {}] {}\n'.format(
                         get_elapse_time(t0), file))
                     f.write(result_str)
+
+    if args.always_remove_model:
+        for criteria in ['best-bleu', 'best-ppl']:  # 'best-bleu', 'best-ppl', 'last'
+            file = os.path.join(
+                args.output_dir, 'checkpoint-{}/pytorch_model.bin'.format(criteria))
+            dir_path = os.path.join(
+                args.output_dir, 'checkpoint-{}'.format(criteria))
+            os.remove(file)
+            os.rmdir(dir_path)
     logger.info("Finish and take {}".format(get_elapse_time(t0)))
     fa.write("Finish and take {}".format(get_elapse_time(t0)))
     fa.close()
