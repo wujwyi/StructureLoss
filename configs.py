@@ -149,10 +149,10 @@ def set_hyperparas(args):
         args.beam_size = 10
         args.gradient_accumulation_steps = 1
         args.lr = 5e-5
-        args.max_source_length = 256
-        args.max_target_length = 128
+        args.max_source_length = 320
+        args.max_target_length = 256
         args.num_train_epochs = 100
-        args.patience = 2
+        args.patience = 5
         args.weight_decay = 0.0
         args.warmup_steps = 1000
 
