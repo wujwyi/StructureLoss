@@ -10,16 +10,16 @@ from utils import format_attention
 
 logger = logging.getLogger(__name__)
 
-MODEL_CHECKPOINTS = {'roberta': 'roberta-base',
-                     'codebert': 'microsoft/codebert-base',
-                     'graphcodebert': 'microsoft/graphcodebert-base',
-                     't5': 't5-base',
-                     'codet5': 'Salesforce/codet5-base',
-                     'bart': 'facebook/bart-base',
-                     'plbart': 'uclanlp/plbart-base'}
+# MODEL_CHECKPOINTS = {'roberta': 'roberta-base',
+#                      'codebert': 'microsoft/codebert-base',
+#                      'graphcodebert': 'microsoft/graphcodebert-base',
+#                      't5': 't5-base',
+#                      'codet5': 'Salesforce/codet5-base',
+#                      'bart': 'facebook/bart-base',
+#                      'plbart': 'uclanlp/plbart-base'}
 
 
-HUGGINGFACE_LOCALS = '/home/hadoop-aipnlp/dolphinfs/hdd_pool/data/zhurenyu/huggingface-models/'
+HUGGINGFACE_LOCALS = '/root/workspace/huggingface-models/'
 MODEL_LOCALS = {
     'roberta': HUGGINGFACE_LOCALS + 'roberta-base',
     'codebert':  HUGGINGFACE_LOCALS + 'codebert-base',
@@ -102,7 +102,7 @@ def bulid_or_load_gen_model(args):
     else:
         model_name = args.model_name
 
-    checkpoint = MODEL_CHECKPOINTS[model_name]
+    checkpoint = HUGGINGFACE_LOCALS[model_name]
     # checkpoint = MODEL_LOCALS[model_name]
     config = AutoConfig.from_pretrained(checkpoint)
     tokenizer = AutoTokenizer.from_pretrained(checkpoint)
