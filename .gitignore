@@ -164,5 +164,4 @@ save_models/
 tensorboard/
 results/
 data/
-run.sh
 run_example.sh
