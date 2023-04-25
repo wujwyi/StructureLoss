@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 #                      'plbart': 'uclanlp/plbart-base'}
 
 
-HUGGINGFACE_LOCALS = '/root/workspace/huggingface-models/'
+HUGGINGFACE_LOCALS = '../huggingface-models/'
 MODEL_LOCALS = {
     'roberta': HUGGINGFACE_LOCALS + 'roberta-base',
     'codebert':  HUGGINGFACE_LOCALS + 'codebert-base',
