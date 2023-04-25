@@ -164,3 +164,5 @@ save_models/
 tensorboard/
 results/
 data/
+run.share
+run_example.sh
