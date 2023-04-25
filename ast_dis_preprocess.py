@@ -20,7 +20,7 @@ sys.setrecursionlimit(5000)
 #                      'bart': 'facebook/bart-base',
 #                      'plbart': 'uclanlp/plbart-base'}
 
-HUGGINGFACE_LOCALS = '/root/workspace/huggingface-models/'
+HUGGINGFACE_LOCALS = '../workspace/huggingface-models/'
 MODEL_LOCALS = {
     'roberta': HUGGINGFACE_LOCALS + 'roberta-base',
     'codebert':  HUGGINGFACE_LOCALS + 'codebert-base',
