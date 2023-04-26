@@ -39,7 +39,7 @@ RUN_FN=${WORKDIR}/main.py
 
 CUDA_VISIBLE_DEVICES=${CUDA_NO} \
 TOKENIZERS_PARALLELISM=false \
-  python -u ${RUN_FN} ${MULTI_TASK_AUG} \
+  python3.8 -u ${RUN_FN} ${MULTI_TASK_AUG} \
   --do_test --do_train --do_eval --do_eval_bleu --save_last_checkpoints ${STORE} --always_save_model --always_remove_model ${REMOVE} \
   --task ${TASK} --sub_task ${SUB_TASK} --model_name ${MODEL_NAME} --data_num ${DATA_NUM}  \
   --output_dir ${OUTPUT_DIR}  --summary_dir ${SUMMARY_DIR} \
