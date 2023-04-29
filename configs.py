@@ -162,14 +162,14 @@ def set_hyperparas(args):
             args.lang = 'java'
 
         if args.model_name in ['roberta', 'codebert', 'graphcodebert']:
-            args.batch_size = 128  # A100
-            # args.batch_size = 48 # V100
+            # args.batch_size = 128  # A100
+            args.batch_size = 48 # V100
         elif args.model_name in ['t5', 'codet5']:
-            args.batch_size = 64  # A100
-            # args.batch_size = 32
+            # args.batch_size = 64  # A100
+            args.batch_size = 32
         elif args.model_name in ['bart', 'plbart']:
-            args.batch_size = 128  # A100
-            # args.batch_size = 48 # V100
+            # args.batch_size = 128  # A100
+            args.batch_size = 48 # V100
         elif args.model_name in ['unixcoder']:
-            args.batch_size = 128  # A100
-            # args.batch_size = 48 # V100
+            # args.batch_size = 128  # A100
+            args.batch_size = 48 # V100
