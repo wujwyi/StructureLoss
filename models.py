@@ -54,28 +54,28 @@ def calculate_attention_difference(model_attention, struc_attention, struc_loss_
             # print('loss shape', loss.shape, ', loss', loss)
         return loss
     else:
-        num_head = model_attention[0].shape[1]
-        loss_average = 0
-        for head in range(num_head):
-            model_attention_selected = format_attention(
-                model_attention, heads=head, layers=0)
-            model_attention_selected = model_attention_selected.squeeze(
-                dim=1)  # remove dimension for layers
-            model_attention_selected = model_attention_selected.squeeze(
-                dim=1)  # remove dimension for heads
-            struc_attention = struc_attention.squeeze(dim=-1)
-            # print('model_attention_selected shape', model_attention_selected.shape)
-            # print('struc_attention shape', struc_attention.shape)
-            matrix_size = struc_attention.shape[-1]
-            if struc_loss_type == 'wasserstein':
-                LOSS = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
-                loss = LOSS(model_attention_selected, struc_attention)
-                loss = loss.sum() / (matrix_size * matrix_size)
-                # print('loss shape', loss.shape, ', loss', loss)
-            loss_average += loss
-        # Arithmetic average of strutureloss for each head
-        loss_average = loss_average / num_head
-        return loss_average
+        # get first layer, shape:(batch_size, num_heads, sequence_length, sequence_length)
+        model_attention_selected = model_attention[0]
+
+        struc_attention = struc_attention.squeeze(dim=-1)
+        struc_attention = struc_attention.unsqueeze(1)
+
+        num_head, seq_length = model_attention_selected.shape[1], struc_attention.shape[-1]
+
+        struc_attention = struc_attention.repeat(1, num_head, 1, 1)
+
+        model_attention_selected = model_attention_selected.view(
+            -1, model_attention_selected.shape[2], model_attention_selected.shape[3])  # shape:(batch_size*num_heads, sequence_length, sequence_length)
+
+        struc_attention = struc_attention.view(
+            -1, struc_attention.shape[2], struc_attention.shape[3])
+        
+        if struc_loss_type == 'wasserstein':
+            LOSS = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
+            loss = LOSS(model_attention_selected, struc_attention)
+            loss = loss.sum() / (num_head * seq_length * seq_length)
+            # print('loss shape', loss.shape, ', loss', loss)
+        return loss
 
 
 class StrucEncoder(nn.Module):

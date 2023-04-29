@@ -136,7 +136,7 @@ def set_hyperparas(args):
             args.batch_size = 48  # V100
         elif args.model_name in ['roberta-sl', 'codebert-sl', 'graphcodebert-sl']:
             # args.batch_size = 128 # A100
-            args.batch_size = 48  # V100
+            args.batch_size = 46  # V100
             args.is_sl = True
             # args.data_num = 1000
         elif args.model_name in ['unixcoder-sl']:
