@@ -59,11 +59,12 @@ def get_shortest_path_length_in_tree(G):
     return dict(nx.shortest_path_length(G))
 
 
-def get_token_number(G, source_code):
+def get_T_token_number_type(G, source_code):
     T = nx.dfs_tree(G, 0)
     leaves = [x for x in T.nodes() if T.out_degree(x) ==
               0 and T.in_degree(x) == 1]
     token_number_dict = {}
+    tokens_type_dict = {}
     for leaf in leaves:
         feature = G.nodes[leaf]['features']
         if feature.type != 'comment':
@@ -71,7 +72,8 @@ def get_token_number(G, source_code):
             end = feature.end_point
             token = index_to_code_token([start, end], source_code)
             token_number_dict[leaf] = token
-    return token_number_dict
+            tokens_type_dict[leaf] = feature.type
+    return T, token_number_dict, tokens_type_dict
 
 
 def get_token_map_subtoken(subtokens, tokens, tokens_number, tokenizer):
@@ -109,17 +111,45 @@ def get_subtoken_map_token(token_map_dict):
     return subtoken_map_dict
 
 
+def get_sast(T, leaves, tokens_dict, tokens_type_dict):
+    # add subtoken edges and Data flow edges to T
+    T = nx.Graph(T)
+    subtoken_edges = []
+    dataflow_edges = []
+    identifier_dict = {}
+    i = 0
+    for leaf in leaves:
+        token = tokens_dict[leaf]
+        token_type = tokens_type_dict[leaf]
+        if token_type == 'identifier':
+            if token not in identifier_dict:
+                identifier_dict[token] = leaf
+            else:
+                dataflow_edges.append((identifier_dict[token], leaf))
+                identifier_dict[token] = leaf
+        if i > 0:
+            subtoken_edges.append((old_leaf, leaf))
+        old_leaf = leaf
+        i += 1
+    T.add_edges_from(subtoken_edges)
+    T.add_edges_from(dataflow_edges)
+    return T  # new_T
+
+
 def generate_ast_dis(filename, tokenizer, args):
     data_all = read_summarize_examples(filename=filename, data_num=-1)
+    u_ast_tag = ''
+    if args.upgraded_ast:
+        u_ast_tag = '_uast'
     if 'train' in filename:
         target_dir = filename.replace(
-            'train.jsonl', '{}/train/'.format(args.model_name + '-sl'))
+            'train.jsonl', '{}/train/'.format(args.model_name + '-sl' + u_ast_tag))
     elif 'valid' in filename:
         target_dir = filename.replace(
-            'valid.jsonl', '{}/valid/'.format(args.model_name + '-sl'))
+            'valid.jsonl', '{}/valid/'.format(args.model_name + '-sl' + u_ast_tag))
     else:
         target_dir = filename.replace(
-            'test.jsonl', '{}/test/'.format(args.model_name + '-sl'))
+            'test.jsonl', '{}/test/'.format(args.model_name + '-sl' + u_ast_tag))
     print('target_dir', target_dir)
     max_length = args.max_length
     if not os.path.exists(target_dir):
@@ -129,13 +159,19 @@ def generate_ast_dis(filename, tokenizer, args):
         subtokens = get_subtokens(
             source_code=source_code, tokenizer=tokenizer, max_length=args.max_length)
         G = get_traverse_graph(source_code=source_code, lang=args.lang)
-        token_number_dict = get_token_number(G=G, source_code=source_code)
+        T, token_number_dict, tokens_type_dict = get_T_token_number_type(
+            G=G, source_code=source_code)
+        u_ast = get_sast(T, token_number_dict.keys(),
+                         token_number_dict, tokens_type_dict)
         tokens, tokens_number = list(
             token_number_dict.values()), list(token_number_dict.keys())
         token_map_dict = get_token_map_subtoken(
             subtokens=subtokens, tokens=tokens, tokens_number=tokens_number, tokenizer=tokenizer)
         subtoken_map_dict = get_subtoken_map_token(token_map_dict)
-        shortest_path_length = get_shortest_path_length_in_tree(G)
+        if args.upgraded_ast:
+            shortest_path_length = get_shortest_path_length_in_tree(u_ast)
+        else:
+            shortest_path_length = get_shortest_path_length_in_tree(G)
         target_name = '{}/{}.pt'.format(target_dir, idx)
         dis_mat = torch.zeros(max_length, max_length)
         for i in range(max_length):
@@ -156,6 +192,7 @@ def main():
     parser.add_argument("--lang", type=str, default='')
     parser.add_argument("--max_length", type=int, default=256)
     parser.add_argument("--use_shortest_path", action='store_true')
+    parser.add_argument("--upgraded_ast", action='store_true')
     args = parser.parse_args()
 
     if args.task == 'summarize-idx':
@@ -173,3 +210,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
