@@ -10,7 +10,8 @@ STORE=0
 REMOVE=1
 SEED=1234
 MULTIHEADLOSS=${6}
-TESTTAG=${7}
+UAST=${7}
+TESTTAG=${8}
 
 
 
@@ -44,5 +45,5 @@ TOKENIZERS_PARALLELISM=false \
   --task ${TASK} --sub_task ${SUB_TASK} --model_name ${MODEL_NAME} --data_num ${DATA_NUM}  \
   --output_dir ${OUTPUT_DIR}  --summary_dir ${SUMMARY_DIR} \
   --data_dir /mnt/e/data  --cache_path ${CACHE_DIR} --res_dir ${RES_DIR} --res_fn ${RES_FN} --use_sumppl_in_struc_eval\
-  --alpha ${ALPHA} --seed ${SEED} --multi_head_loss ${MULTIHEADLOSS}\
+  --alpha ${ALPHA} --seed ${SEED} --multi_head_loss ${MULTIHEADLOSS} --upgraded_ast ${UAST}\
   2>&1 | tee ${LOG}

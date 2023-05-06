@@ -75,6 +75,7 @@ def add_args(parser):
                         help='Parameter to balance structure loss')
     parser.add_argument("--use_sumppl_in_struc_eval", action='store_true')
     parser.add_argument("--multi_head_loss", type=int, default=0)
+    parser.add_argument("--upgraded_ast", type=int, default=0)
     args = parser.parse_args()
     return args
 

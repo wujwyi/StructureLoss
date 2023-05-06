@@ -80,7 +80,10 @@ def convert_examples_to_features(item):
 
 def convert_one_examples_to_features_with_sl(example, tokenizer, example_index, stage, args):
     if args.model_name in ['codebert-sl', 'roberta-sl', 'graphcodebert-sl']:
-        model_name = 'codebert-sl'
+        if args.upgraded_ast:
+            model_name = 'codebert-sl_uast'
+        else:
+            model_name = 'codebert-sl'
     else:
         model_name = args.model_name
     # load the preprocessed features (pt)
