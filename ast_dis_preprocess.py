@@ -159,14 +159,17 @@ def generate_ast_dis(filename, tokenizer, args):
         subtokens = get_subtokens(
             source_code=source_code, tokenizer=tokenizer, max_length=args.max_length)
         G = get_traverse_graph(source_code=source_code, lang=args.lang)
+        # token_number_dict:    key:Nodes number in the ast tree,    value:token in source code
         T, token_number_dict, tokens_type_dict = get_T_token_number_type(
             G=G, source_code=source_code)
         u_ast = get_sast(T, token_number_dict.keys(),
                          token_number_dict, tokens_type_dict)
         tokens, tokens_number = list(
             token_number_dict.values()), list(token_number_dict.keys())
+        # token_map_dict:    key:Nodes number in the ast tree,   value:index in subtokens
         token_map_dict = get_token_map_subtoken(
             subtokens=subtokens, tokens=tokens, tokens_number=tokens_number, tokenizer=tokenizer)
+        # subtoken_map_dict:    key:index in subtokens,   value:Nodes number in the ast tree
         subtoken_map_dict = get_subtoken_map_token(token_map_dict)
         if args.upgraded_ast:
             shortest_path_length = get_shortest_path_length_in_tree(u_ast)
