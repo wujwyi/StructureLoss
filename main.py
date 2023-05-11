@@ -174,6 +174,7 @@ def eval_bleu_epoch(args, eval_data, eval_examples, model, tokenizer, split_tag,
 
 
 def main():
+    torch.set_float32_matmul_precision('high')
     parser = argparse.ArgumentParser()
     args = add_args(parser)
     t0 = time.time()
