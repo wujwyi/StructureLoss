@@ -31,6 +31,8 @@ MODEL_LOCALS = {
     'unixcoder': HUGGINGFACE_LOCALS + 'unixcoder-base',
 }
 
+def calculte_struc_loss_en_decoder(encoder_attention, decoder_attention, struc_attention, struc_loss_type=None, multi_head_loss=None):
+    pass
 
 def calculate_attention_difference(model_attention, struc_attention, struc_loss_type=None, multi_head_loss=None):
     # model_attention_selected = model_attention[-1]  # choose the attention of last layer
@@ -64,6 +66,9 @@ def calculate_attention_difference(model_attention, struc_attention, struc_loss_
 
         struc_attention = struc_attention.repeat(1, num_head, 1, 1)
 
+        model_attention_selected=model_attention_selected.permute([1,0,2,3]).contiguous()
+        # model_attention_selected=model_attention_selected.transpose_(0, 1).contiguous()
+        
         model_attention_selected = model_attention_selected.view(
             -1, model_attention_selected.shape[2], model_attention_selected.shape[3])  # shape:(batch_size*num_heads, sequence_length, sequence_length)
 
@@ -140,6 +145,10 @@ def bulid_or_load_gen_model(args):
             sos_id=tokenizer.convert_tokens_to_ids(["<mask0>"])[0],
             eos_id=tokenizer.sep_token_id
         )
+    elif args.model_name in ['codet5-sl']:
+        config.output_attentions = True
+        model = T5ForConditionalGeneration.from_pretrained(
+            checkpoint, config=config)
     elif args.model_name in ['roberta-sl', 'codebert-sl', 'graphcodebert-sl']:
         config.output_attentions = True
         encoder = AutoModel.from_pretrained(checkpoint, config=config)

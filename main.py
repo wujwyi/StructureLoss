@@ -281,6 +281,10 @@ def main():
                                     labels=target_ids, decoder_attention_mask=target_mask)
                     loss = outputs.loss
                     struc_loss = torch.tensor(0.0, device=loss.device)
+                elif args.model_name in ['codet5-sl']:
+                    outputs = model(input_ids=source_ids, attention_mask=source_mask,
+                                    labels=target_ids, decoder_attention_mask=target_mask)
+                    loss = outputs.loss
                 elif args.model_name in ['roberta-sl', 'codebert-sl', 'graphcodebert-sl','codet5-sl']:
                     loss, struc_loss, _, _, _ = model(source_ids=source_ids, source_mask=source_mask,
                                                       target_ids=target_ids, target_mask=target_mask,
