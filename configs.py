@@ -76,6 +76,7 @@ def add_args(parser):
     parser.add_argument("--use_sumppl_in_struc_eval", action='store_true')
     parser.add_argument("--multi_head_loss", type=int, default=0)
     parser.add_argument("--upgraded_ast", type=int, default=0)
+    parser.add_argument("--debug_mode", type=int, default=0)
     args = parser.parse_args()
     return args
 
@@ -137,7 +138,7 @@ def set_hyperparas(args):
             args.batch_size = 48  # V100
         elif args.model_name in ['roberta-sl', 'codebert-sl', 'graphcodebert-sl']:
             # args.batch_size = 128 # A100
-            args.batch_size = 46  # V100
+            args.batch_size = 44  # V100
             args.is_sl = True
             # args.data_num = 1000
         elif args.model_name in ['unixcoder-sl']:
@@ -164,13 +165,16 @@ def set_hyperparas(args):
 
         if args.model_name in ['roberta', 'codebert', 'graphcodebert']:
             # args.batch_size = 128  # A100
-            args.batch_size = 48 # V100
+            args.batch_size = 48  # V100
         elif args.model_name in ['t5', 'codet5']:
             # args.batch_size = 64  # A100
             args.batch_size = 32
         elif args.model_name in ['bart', 'plbart']:
             # args.batch_size = 128  # A100
-            args.batch_size = 48 # V100
+            args.batch_size = 48  # V100
         elif args.model_name in ['unixcoder']:
             # args.batch_size = 128  # A100
-            args.batch_size = 48 # V100
+            args.batch_size = 48  # V100
+
+    if args.debug_mode:
+        args.batch_size = 16
