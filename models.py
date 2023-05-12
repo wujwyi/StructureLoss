@@ -31,8 +31,6 @@ MODEL_LOCALS = {
     'unixcoder': HUGGINGFACE_LOCALS + 'unixcoder-base',
 }
 
-def calculte_struc_loss_en_decoder(encoder_attention, decoder_attention, struc_attention, struc_loss_type=None, multi_head_loss=None):
-    pass
 
 def calculate_attention_difference(model_attention, struc_attention, struc_loss_type=None, multi_head_loss=None):
     # model_attention_selected = model_attention[-1]  # choose the attention of last layer
@@ -66,15 +64,16 @@ def calculate_attention_difference(model_attention, struc_attention, struc_loss_
 
         struc_attention = struc_attention.repeat(1, num_head, 1, 1)
 
-        model_attention_selected=model_attention_selected.permute([1,0,2,3]).contiguous()
+        model_attention_selected = model_attention_selected.permute(
+            [1, 0, 2, 3]).contiguous()
         # model_attention_selected=model_attention_selected.transpose_(0, 1).contiguous()
-        
+
         model_attention_selected = model_attention_selected.view(
             -1, model_attention_selected.shape[2], model_attention_selected.shape[3])  # shape:(batch_size*num_heads, sequence_length, sequence_length)
 
         struc_attention = struc_attention.view(
             -1, struc_attention.shape[2], struc_attention.shape[3])
-        
+
         if struc_loss_type == 'wasserstein':
             LOSS = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
             loss = LOSS(model_attention_selected, struc_attention)
@@ -147,8 +146,9 @@ def bulid_or_load_gen_model(args):
         )
     elif args.model_name in ['codet5-sl']:
         config.output_attentions = True
-        model = T5ForConditionalGeneration.from_pretrained(
+        t5_model = T5ForConditionalGeneration.from_pretrained(
             checkpoint, config=config)
+        model = Codet5WithSL(t5_model=t5_model, struc_encoder=struc_encoder)
     elif args.model_name in ['roberta-sl', 'codebert-sl', 'graphcodebert-sl']:
         config.output_attentions = True
         encoder = AutoModel.from_pretrained(checkpoint, config=config)
@@ -279,6 +279,35 @@ class Seq2Seq(nn.Module):
 
             preds = torch.cat(preds, 0)
             return preds, encoder_attention
+
+
+class Codet5WithSL(nn.Module):
+    def __init__(self, t5_model, struc_encoder):
+        super(Codet5WithSL, self).__init__()
+        self.t5_model = t5_model
+        self.struc_encoder = struc_encoder
+
+    def forward(self, input_ids, attention_mask, labels=None, decoder_attention_mask=None, sl_feats=None, args=None):
+        if sl_feats is not None:
+            # print('before sl_feats shape', sl_feats.shape)
+            sl_feats = sl_feats.view(
+                input_ids.shape[0], args.max_source_length, args.max_source_length, -1)
+            # print('after sl_feats shape', sl_feats.shape)
+        if labels is not None:
+            output = self.t5_model(input_ids=input_ids, attention_mask=attention_mask,
+                                   labels=labels, decoder_attention_mask=decoder_attention_mask)
+            encoder_attention = output.encoder_attentions
+            loss = output.loss
+            if sl_feats is not None:
+                struc_attention = self.struc_encoder(sl_feats)
+                struc_loss = calculate_attention_difference(
+                    encoder_attention, struc_attention, struc_loss_type=args.struc_loss_type, multi_head_loss=args.multi_head_loss)
+            else:
+                struc_loss = torch.tensor(0.0, device=loss.device)
+            return loss, struc_loss
+
+    def generate(self, source_ids, attention_mask, use_cache, num_beams, early_stopping, max_length):
+        return self.t5_model.generate(source_ids, attention_mask, use_cache, num_beams, early_stopping, max_length)
 
 
 class Seq2SeqWithSL(nn.Module):

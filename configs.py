@@ -145,6 +145,10 @@ def set_hyperparas(args):
             # args.batch_size = 128 # A100
             args.batch_size = 48  # V100
             args.is_sl = True
+        elif args.model_name in ['codet5-sl']:
+            # args.batch_size = 128 # A100
+            args.batch_size = 32  # V100
+            args.is_sl = True
 
     elif args.task == 'translate':
         args.adam_epsilon = 1e-8

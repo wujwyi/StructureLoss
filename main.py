@@ -100,11 +100,15 @@ def eval_bleu_epoch(args, eval_data, eval_examples, model, tokenizer, split_tag,
                 preds, _ = model(source_ids=source_ids)
                 top_preds = [pred[0].cpu().numpy() for pred in preds]
             else:
+                if 'summarize' in args.task:
+                    early_stopping = True
+                else:
+                    early_stopping = False
                 preds = model.generate(source_ids,
                                        attention_mask=source_mask,
                                        use_cache=True,
                                        num_beams=args.beam_size,
-                                       early_stopping=args.task == 'summarize',
+                                       early_stopping=early_stopping,
                                        max_length=args.max_target_length)
                 top_preds = list(preds.cpu().numpy())
             pred_ids.extend(top_preds)
@@ -282,10 +286,10 @@ def main():
                     loss = outputs.loss
                     struc_loss = torch.tensor(0.0, device=loss.device)
                 elif args.model_name in ['codet5-sl']:
-                    outputs = model(input_ids=source_ids, attention_mask=source_mask,
-                                    labels=target_ids, decoder_attention_mask=target_mask)
-                    loss = outputs.loss
-                elif args.model_name in ['roberta-sl', 'codebert-sl', 'graphcodebert-sl','codet5-sl']:
+                    loss, struc_loss = model(input_ids=source_ids, attention_mask=source_mask,
+                                             labels=target_ids, decoder_attention_mask=target_mask, sl_feats=sl_feats, args=args)
+                    loss = loss + struc_loss * args.alpha
+                elif args.model_name in ['roberta-sl', 'codebert-sl', 'graphcodebert-sl', 'codet5-sl']:
                     loss, struc_loss, _, _, _ = model(source_ids=source_ids, source_mask=source_mask,
                                                       target_ids=target_ids, target_mask=target_mask,
                                                       sl_feats=sl_feats, args=args)
