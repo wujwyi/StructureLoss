@@ -88,7 +88,7 @@ def convert_one_examples_to_features_with_sl(example, tokenizer, example_index, 
         model_name = args.model_name
     # load the preprocessed features (pt)
     sl_file = '{}/summarize-idx/{}/{}/{}/{}.pt'.format(args.data_dir,
-        args.lang, model_name, stage, example_index)
+                                                       args.lang, model_name, stage, example_index)
     sl_feats = torch.load(sl_file)
     if args.model_name in ['t5', 'codet5'] and args.add_task_prefix:
         if args.sub_task != 'none':
@@ -269,6 +269,25 @@ def read_translate_examples(filename, data_num):
                     idx=idx,
                     source=src,
                     target=trg,
+                )
+            )
+            idx += 1
+            if idx == data_num:
+                break
+    return examples
+
+def read_translate_examples_for_genast(filename, data_num):
+    """Read examples from filename."""
+    examples = []
+    idx = 0
+    with open(filename) as f1:
+        for line1 in f1:
+            src = line1.strip()
+            examples.append(
+                Example(
+                    idx=idx,
+                    source=src,
+                    target=''
                 )
             )
             idx += 1
@@ -829,7 +848,6 @@ def format_attention(attention, heads, layers=None):
                              "output_attentions=True when initializing your model.")
         # num_heads x batch_size x seq_len x seq_len
         layer_attention = layer_attention.permute((1, 0, 2, 3))
-
 
         layer_attention = layer_attention[heads]
         layer_attention = layer_attention.unsqueeze(0)

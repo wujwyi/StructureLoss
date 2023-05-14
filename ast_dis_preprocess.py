@@ -6,7 +6,7 @@ import torch
 
 from transformers import AutoTokenizer
 from tqdm import tqdm
-from utils import read_summarize_examples, format_special_chars, get_filenames, traverse, index_to_code_token
+from utils import read_summarize_examples, read_translate_examples_for_genast, format_special_chars, get_filenames, traverse, index_to_code_token
 from tree_sitter import Language, Parser
 
 sys.setrecursionlimit(5000)
@@ -135,8 +135,63 @@ def get_sast(T, leaves, tokens_dict, tokens_type_dict):
     T.add_edges_from(dataflow_edges)
     return T  # new_T
 
+def generate_ast_dis_translate(filename, tokenizer, args):
+    data_all = read_translate_examples_for_genast(filename=filename, data_num=-1)
+    u_ast_tag = ''
+    if args.upgraded_ast:
+        u_ast_tag = '_uast'
+    lang=filename.split('.')[-1]
+    if lang == 'cs':
+        lang = 'c_sharp'
+    last_filename=filename.split('/')[-1]
+    if 'train' in filename:
+        target_dir = filename.replace(
+            last_filename, '{}/train/'.format(args.model_name + '-sl' + u_ast_tag))
+    elif 'valid' in filename:
+        target_dir = filename.replace(
+            last_filename, '{}/valid/'.format(args.model_name + '-sl' + u_ast_tag))
+    else:
+        target_dir = filename.replace(
+            last_filename, '{}/test/'.format(args.model_name + '-sl' + u_ast_tag))
+    target_dir=target_dir+lang+'/'
+    print('target_dir', target_dir)
+    max_length = args.max_length
+    if not os.path.exists(target_dir):
+        os.makedirs(target_dir)
+    for data in tqdm(data_all):
+        source_code, idx = data.source, data.idx
+        if args.model_name in ['codet5','t5']:
+            source_code="{} {}: {}".format(
+                args.task, args.sub_task, source_code)
+        subtokens = get_subtokens(
+            source_code=source_code, tokenizer=tokenizer, max_length=args.max_length)
+        G = get_traverse_graph(source_code=source_code, lang=lang)
+        # token_number_dict:    key:Nodes number in the ast tree,    value:token in source code
+        T, token_number_dict, tokens_type_dict = get_T_token_number_type(
+            G=G, source_code=source_code)
+        u_ast = get_sast(T, token_number_dict.keys(),
+                         token_number_dict, tokens_type_dict)
+        tokens, tokens_number = list(
+            token_number_dict.values()), list(token_number_dict.keys())
+        # token_map_dict:    key:Nodes number in the ast tree,   value:index in subtokens
+        token_map_dict = get_token_map_subtoken(
+            subtokens=subtokens, tokens=tokens, tokens_number=tokens_number, tokenizer=tokenizer)
+        # subtoken_map_dict:    key:index in subtokens,   value:Nodes number in the ast tree
+        subtoken_map_dict = get_subtoken_map_token(token_map_dict)
+        if args.upgraded_ast:
+            shortest_path_length = get_shortest_path_length_in_tree(u_ast)
+        else:
+            shortest_path_length = get_shortest_path_length_in_tree(G)
+        target_name = '{}/{}.pt'.format(target_dir, idx)
+        dis_mat = torch.zeros(max_length, max_length)
+        for i in range(max_length):
+            for j in range(max_length):
+                if i in subtoken_map_dict and j in subtoken_map_dict:
+                    dis_mat[i][j] = shortest_path_length[subtoken_map_dict[i]
+                                                         ][subtoken_map_dict[j]]
+        torch.save(dis_mat, target_name)
 
-def generate_ast_dis(filename, tokenizer, args):
+def generate_ast_dis_summarize(filename, tokenizer, args):
     data_all = read_summarize_examples(filename=filename, data_num=-1)
     u_ast_tag = ''
     if args.upgraded_ast:
@@ -156,6 +211,9 @@ def generate_ast_dis(filename, tokenizer, args):
         os.makedirs(target_dir)
     for data in tqdm(data_all):
         source_code, idx = data.source, data.idx
+        if args.model_name in ['codet5','t5']:
+            source_code="{} {}: {}".format(
+                args.task, args.sub_task, source_code)
         subtokens = get_subtokens(
             source_code=source_code, tokenizer=tokenizer, max_length=args.max_length)
         G = get_traverse_graph(source_code=source_code, lang=args.lang)
@@ -190,7 +248,7 @@ def main():
     parser.add_argument("--model_name", default="roberta",
                         type=str, choices=['roberta', 'codebert', 'graphcodebert', 'bart', 'plbart', 't5', 'codet5', 'unixcoder'])
     parser.add_argument("--task", type=str, required=True,
-                        choices=['summarize-idx'])
+                        choices=['summarize-idx', 'translate-idx'])
     parser.add_argument("--sub_task", type=str, default='')
     parser.add_argument("--lang", type=str, default='')
     parser.add_argument("--max_length", type=int, default=256)
@@ -206,12 +264,23 @@ def main():
 
     filenames = get_filenames(data_root='/mnt/e/data',
                               task=args.task, sub_task=args.sub_task)
+    
+    if args.task == 'translate-idx':
+        split_filenames = []
+        for file_pair in filenames:
+            split = file_pair.split(',')
+            split_filenames += split
+        filenames = split_filenames
+
     print('filenames', filenames)
     for fn in filenames:
-        generate_ast_dis(filename=fn, tokenizer=tokenizer, args=args)
+        if args.task == 'summarize-idx':
+            args.task = 'summarize'
+            generate_ast_dis_summarize(filename=fn, tokenizer=tokenizer, args=args)
+        elif args.task == 'translate-idx':
+            args.task = 'translate'
+            generate_ast_dis_translate(filename=fn, tokenizer=tokenizer, args=args)
 
 
 if __name__ == "__main__":
     main()
-
-
