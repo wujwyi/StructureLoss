@@ -77,29 +77,41 @@ def get_T_token_number_type(G, source_code):
 
 
 def get_token_map_subtoken(subtokens, tokens, tokens_number, tokenizer):
-    tokens_pos = 0
-    token_map_list = []
-    token_map_dict = {}
-    token_cum = ''
+    subtoken_numbers = []
+    pos = 0
+    pos_old = 0
+    token_list_output = []
+    token_map_dict={}
+    jump_flag=0
     for j in range(len(subtokens)):
         if subtokens[j] in ['<s>', '</s>', '<pad>'] or subtokens[j] in tokenizer.additional_special_tokens:
-            pass
+            # the special tokens of tokenizer is not involved in AST tree, we use -1 to tag it
+            subtoken_numbers.append(-1)
         else:
-            token_cum += subtokens[j]
-            token_map_list.append(j)
-            # print('token_cum:', token_cum, ', tokens_pos:', tokens_pos, 'token', tokens[tokens_pos])
-            # delete all null str
-            while tokens_pos < len(tokens) and tokens[tokens_pos] == '':
-                tokens_pos += 1
-            if tokens_pos >= len(tokens):
-                return token_map_dict  # handle the exception
-            if token_cum == tokens[tokens_pos] or j == len(subtokens) - 1:
-                token_map_dict[tokens_number[tokens_pos]] = token_map_list
-                token_map_list = []
-                token_cum = ''
-                tokens_pos += 1
-    return token_map_dict
-
+            if jump_flag == 1:
+                pos = pos_old + 1
+                jump_flag = 0
+            cnt_move=0
+            if pos >= len(tokens):
+                subtoken_numbers.append(-1)
+                continue
+            while subtokens[j] not in tokens[pos]:
+                pos += 1
+                cnt_move=cnt_move+1
+                # subtoken like "%3d" may not be included in any token
+                if cnt_move>=4 or pos == len(tokens):
+                    subtoken_numbers.append(-1)
+                    jump_flag = 1
+                    break
+            if jump_flag == 1:
+                continue
+            if pos_old != pos or pos_old == 0:
+                # (language like go) it will prevent a combined token
+                # (which pair more than 1 subtoken) append to token_list_output several times
+                token_list_output.append(tokens[pos])
+            subtoken_numbers.append(tokens_number[pos])
+            pos_old = pos
+    return subtoken_numbers
 
 def get_subtoken_map_token(token_map_dict):
     # whether to add the postion of subtoken
@@ -224,22 +236,17 @@ def generate_ast_dis_summarize(filename, tokenizer, args):
                          token_number_dict, tokens_type_dict)
         tokens, tokens_number = list(
             token_number_dict.values()), list(token_number_dict.keys())
-        # token_map_dict:    key:Nodes number in the ast tree,   value:index in subtokens
-        token_map_dict = get_token_map_subtoken(
-            subtokens=subtokens, tokens=tokens, tokens_number=tokens_number, tokenizer=tokenizer)
-        # subtoken_map_dict:    key:index in subtokens,   value:Nodes number in the ast tree
-        subtoken_map_dict = get_subtoken_map_token(token_map_dict)
+        subtoken2token_index = get_token_map_subtoken(subtokens=subtokens, tokens=tokens, tokens_number=tokens_number, tokenizer=tokenizer)
         if args.upgraded_ast:
             shortest_path_length = get_shortest_path_length_in_tree(u_ast)
         else:
             shortest_path_length = get_shortest_path_length_in_tree(G)
         target_name = '{}/{}.pt'.format(target_dir, idx)
-        dis_mat = torch.zeros(max_length, max_length)
+        dis_mat = torch.full((max_length, max_length), -1e4)
         for i in range(max_length):
             for j in range(max_length):
-                if i in subtoken_map_dict and j in subtoken_map_dict:
-                    dis_mat[i][j] = shortest_path_length[subtoken_map_dict[i]
-                                                         ][subtoken_map_dict[j]]
+                if subtoken2token_index[i]!=-1 and subtoken2token_index[j]!=-1:
+                    dis_mat[i][j] = shortest_path_length[subtoken2token_index[i]][subtoken2token_index[j]]
         torch.save(dis_mat, target_name)
 
 
