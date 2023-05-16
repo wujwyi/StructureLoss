@@ -228,8 +228,12 @@ def generate_ast_dis_summarize(filename, tokenizer, args):
     for data in tqdm(data_all):
         source_code, idx = data.source, data.idx
         if args.model_name in ['codet5','t5']:
+            if args.task == 'summarize-idx':
+                task = 'summarize'
+            elif args.task == 'translate-idx':
+                task = 'translate'
             source_code="{} {}: {}".format(
-                args.task, args.sub_task, source_code)
+                task, args.sub_task, source_code)
         subtokens = get_subtokens(
             source_code=source_code, tokenizer=tokenizer, max_length=args.max_length)
         G = get_traverse_graph(source_code=source_code, lang=args.lang)
