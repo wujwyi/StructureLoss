@@ -173,8 +173,12 @@ def generate_ast_dis_translate(filename, tokenizer, args):
     for data in tqdm(data_all):
         source_code, idx = data.source, data.idx
         if args.model_name in ['codet5','t5']:
+            if args.task == 'summarize-idx':
+                task = 'summarize'
+            elif args.task == 'translate-idx':
+                task = 'translate'
             source_code="{} {}: {}".format(
-                args.task, args.sub_task, source_code)
+                task, args.sub_task, source_code)
         subtokens = get_subtokens(
             source_code=source_code, tokenizer=tokenizer, max_length=args.max_length)
         G = get_traverse_graph(source_code=source_code, lang=lang)
@@ -242,7 +246,8 @@ def generate_ast_dis_summarize(filename, tokenizer, args):
         else:
             shortest_path_length = get_shortest_path_length_in_tree(G)
         target_name = '{}/{}.pt'.format(target_dir, idx)
-        dis_mat = torch.full((max_length, max_length), -1e4)
+        # dis_mat = torch.full((max_length, max_length), -1e4)
+        dis_mat = torch.zeros(max_length, max_length)
         for i in range(max_length):
             for j in range(max_length):
                 if subtoken2token_index[i]!=-1 and subtoken2token_index[j]!=-1:
@@ -282,10 +287,8 @@ def main():
     print('filenames', filenames)
     for fn in filenames:
         if args.task == 'summarize-idx':
-            args.task = 'summarize'
             generate_ast_dis_summarize(filename=fn, tokenizer=tokenizer, args=args)
         elif args.task == 'translate-idx':
-            args.task = 'translate'
             generate_ast_dis_translate(filename=fn, tokenizer=tokenizer, args=args)
 
 
