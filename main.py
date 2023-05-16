@@ -6,6 +6,7 @@ import multiprocessing
 import os
 import numpy as np
 import math
+import shutil
 
 from torch.utils.tensorboard import SummaryWriter
 from torch.utils.data import DataLoader, SequentialSampler, RandomSampler
@@ -259,6 +260,7 @@ def main():
         dev_dataset = {}
         global_step, best_bleu_em, best_ppl = 0, -1, 1e6
         not_loss_dec_cnt, not_bleu_em_inc_cnt = 0, 0 if args.do_eval_bleu else 1e6
+        first_not_inc_cnt_3_flag=0
 
         for cur_epoch in range(args.start_epoch, int(args.num_train_epochs)):
             bar = tqdm(train_dataloader, total=len(
@@ -388,6 +390,23 @@ def main():
                             "Save the best ppl model into %s", output_model_file)
                 else:
                     not_loss_dec_cnt += 1
+                    if not_bleu_em_inc_cnt > 2 and not_loss_dec_cnt > 2  and first_not_inc_cnt_3_flag == 0:
+                        first_not_inc_cnt_3_flag = 1
+                        output_dir = os.path.join(args.output_dir, 'checkpoint-best-bleu-patience3')
+                        if not os.path.exists(output_dir):
+                            os.makedirs(output_dir)
+                        src_path=os.path.join(args.output_dir, 'checkpoint-best-bleu/pytorch_model.bin')
+                        dst_path=output_dir+'/pytorch_model.bin'
+                        shutil.copy(src_path, dst_path)
+                        logger.info("Save the patience3 best bleu model into %s", dst_path)
+
+                        output_dir = os.path.join(args.output_dir, 'checkpoint-best-ppl-patience3')
+                        if not os.path.exists(output_dir):
+                            os.makedirs(output_dir)
+                        src_path=os.path.join(args.output_dir, 'checkpoint-ppl-bleu/pytorch_model.bin')
+                        dst_path=output_dir+'/pytorch_model.bin'
+                        shutil.copy(src_path, dst_path)
+                        logger.info("Save the patience3 best ppl model into %s", dst_path)
                     logger.info(
                         "Ppl does not decrease for %d epochs", not_loss_dec_cnt)
                     if all([x > args.patience for x in [not_bleu_em_inc_cnt, not_loss_dec_cnt]]):
@@ -441,6 +460,23 @@ def main():
                         not_bleu_em_inc_cnt += 1
                         logger.info(
                             "Bleu does not increase for %d epochs", not_bleu_em_inc_cnt)
+                        if not_bleu_em_inc_cnt > 2 and not_loss_dec_cnt > 2  and first_not_inc_cnt_3_flag == 0:
+                            first_not_inc_cnt_3_flag = 1
+                            output_dir = os.path.join(args.output_dir, 'checkpoint-best-bleu-patience3')
+                            if not os.path.exists(output_dir):
+                                os.makedirs(output_dir)
+                            src_path=os.path.join(args.output_dir, 'checkpoint-best-bleu/pytorch_model.bin')
+                            dst_path=output_dir+'/pytorch_model.bin'
+                            shutil.copy(src_path, dst_path)
+                            logger.info("Save the patience3 best bleu model into %s", dst_path)
+
+                            output_dir = os.path.join(args.output_dir, 'checkpoint-best-ppl-patience3')
+                            if not os.path.exists(output_dir):
+                                os.makedirs(output_dir)
+                            src_path=os.path.join(args.output_dir, 'checkpoint-ppl-bleu/pytorch_model.bin')
+                            dst_path=output_dir+'/pytorch_model.bin'
+                            shutil.copy(src_path, dst_path)
+                            logger.info("Save the patience3 best ppl model into %s", dst_path)
                         if all([x > args.patience for x in [not_bleu_em_inc_cnt, not_loss_dec_cnt]]):
                             stop_early_str = "[%d] Early stop as not_bleu_em_inc_cnt=%d, and not_loss_dec_cnt=%d\n" % (
                                 cur_epoch, not_bleu_em_inc_cnt, not_loss_dec_cnt)
@@ -458,7 +494,7 @@ def main():
         logger.info("  " + "***** Testing *****")
         logger.info("  Batch size = %d", args.batch_size)
 
-        for criteria in ['best-bleu', 'best-ppl']:  # 'best-bleu', 'best-ppl', 'last'
+        for criteria in ['best-bleu', 'best-ppl', 'last', 'best-bleu-patience3', 'best-ppl-patience3']:  # 'best-bleu', 'best-ppl', 'last'
             file = os.path.join(
                 args.output_dir, 'checkpoint-{}/pytorch_model.bin'.format(criteria))
             logger.info("Reload model from {}".format(file))
@@ -480,7 +516,7 @@ def main():
                     f.write(result_str)
 
     if args.always_remove_model:
-        for criteria in ['best-bleu', 'best-ppl']:  # 'best-bleu', 'best-ppl', 'last'
+        for criteria in ['best-bleu', 'best-ppl', 'last', 'best-bleu-patience3', 'best-ppl-patience3']:  # 'best-bleu', 'best-ppl', 'last'
             file = os.path.join(
                 args.output_dir, 'checkpoint-{}/pytorch_model.bin'.format(criteria))
             dir_path = os.path.join(

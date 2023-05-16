@@ -119,7 +119,7 @@ def set_hyperparas(args):
         args.max_target_length = 128
         args.num_train_epochs = 100
         # args.num_train_epochs = 15 # will not early stop on some datasets if the number of training epochs is too small
-        args.patience = 2
+        args.patience = 5
         args.weight_decay = 0.0
         args.warmup_steps = 1000
         args.lang = args.sub_task
