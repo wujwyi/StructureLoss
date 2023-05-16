@@ -403,7 +403,7 @@ def main():
                         output_dir = os.path.join(args.output_dir, 'checkpoint-best-ppl-patience3')
                         if not os.path.exists(output_dir):
                             os.makedirs(output_dir)
-                        src_path=os.path.join(args.output_dir, 'checkpoint-ppl-bleu/pytorch_model.bin')
+                        src_path=os.path.join(args.output_dir, 'checkpoint-best-ppl/pytorch_model.bin')
                         dst_path=output_dir+'/pytorch_model.bin'
                         shutil.copy(src_path, dst_path)
                         logger.info("Save the patience3 best ppl model into %s", dst_path)
@@ -473,7 +473,7 @@ def main():
                             output_dir = os.path.join(args.output_dir, 'checkpoint-best-ppl-patience3')
                             if not os.path.exists(output_dir):
                                 os.makedirs(output_dir)
-                            src_path=os.path.join(args.output_dir, 'checkpoint-ppl-bleu/pytorch_model.bin')
+                            src_path=os.path.join(args.output_dir, 'checkpoint-best-ppl/pytorch_model.bin')
                             dst_path=output_dir+'/pytorch_model.bin'
                             shutil.copy(src_path, dst_path)
                             logger.info("Save the patience3 best ppl model into %s", dst_path)
