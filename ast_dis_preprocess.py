@@ -81,8 +81,8 @@ def get_token_map_subtoken(subtokens, tokens, tokens_number, tokenizer):
     pos = 0
     pos_old = 0
     token_list_output = []
-    token_map_dict={}
-    jump_flag=0
+    token_map_dict = {}
+    jump_flag = 0
     for j in range(len(subtokens)):
         if subtokens[j] in ['<s>', '</s>', '<pad>'] or subtokens[j] in tokenizer.additional_special_tokens:
             # the special tokens of tokenizer is not involved in AST tree, we use -1 to tag it
@@ -91,15 +91,15 @@ def get_token_map_subtoken(subtokens, tokens, tokens_number, tokenizer):
             if jump_flag == 1:
                 pos = pos_old + 1
                 jump_flag = 0
-            cnt_move=0
+            cnt_move = 0
             if pos >= len(tokens):
                 subtoken_numbers.append(-1)
                 continue
             while subtokens[j] not in tokens[pos]:
                 pos += 1
-                cnt_move=cnt_move+1
+                cnt_move = cnt_move+1
                 # subtoken like "%3d" may not be included in any token
-                if cnt_move>=4 or pos == len(tokens):
+                if cnt_move >= 4 or pos == len(tokens):
                     subtoken_numbers.append(-1)
                     jump_flag = 1
                     break
@@ -112,6 +112,7 @@ def get_token_map_subtoken(subtokens, tokens, tokens_number, tokenizer):
             subtoken_numbers.append(tokens_number[pos])
             pos_old = pos
     return subtoken_numbers
+
 
 def get_subtoken_map_token(token_map_dict):
     # whether to add the postion of subtoken
@@ -147,15 +148,17 @@ def get_sast(T, leaves, tokens_dict, tokens_type_dict):
     T.add_edges_from(dataflow_edges)
     return T  # new_T
 
+
 def generate_ast_dis_translate(filename, tokenizer, args):
-    data_all = read_translate_examples_for_genast(filename=filename, data_num=-1)
+    data_all = read_translate_examples_for_genast(
+        filename=filename, data_num=-1)
     u_ast_tag = ''
     if args.upgraded_ast:
         u_ast_tag = '_uast'
-    lang=filename.split('.')[-1]
+    lang = filename.split('.')[-1]
     if lang == 'cs':
         lang = 'c_sharp'
-    last_filename=filename.split('/')[-1]
+    last_filename = filename.split('/')[-1]
     if 'train' in filename:
         target_dir = filename.replace(
             last_filename, '{}/train/'.format(args.model_name + '-sl' + u_ast_tag))
@@ -165,19 +168,19 @@ def generate_ast_dis_translate(filename, tokenizer, args):
     else:
         target_dir = filename.replace(
             last_filename, '{}/test/'.format(args.model_name + '-sl' + u_ast_tag))
-    target_dir=target_dir+lang+'/'
+    target_dir = target_dir+lang+'/'
     print('target_dir', target_dir)
     max_length = args.max_length
     if not os.path.exists(target_dir):
         os.makedirs(target_dir)
     for data in tqdm(data_all):
         source_code, idx = data.source, data.idx
-        if args.model_name in ['codet5','t5']:
+        if args.model_name in ['codet5', 't5']:
             if args.task == 'summarize-idx':
                 task = 'summarize'
             elif args.task == 'translate-idx':
                 task = 'translate'
-            source_code="{} {}: {}".format(
+            source_code = "{} {}: {}".format(
                 task, args.sub_task, source_code)
         subtokens = get_subtokens(
             source_code=source_code, tokenizer=tokenizer, max_length=args.max_length)
@@ -189,7 +192,8 @@ def generate_ast_dis_translate(filename, tokenizer, args):
                          token_number_dict, tokens_type_dict)
         tokens, tokens_number = list(
             token_number_dict.values()), list(token_number_dict.keys())
-        subtoken2token_index = get_token_map_subtoken(subtokens=subtokens, tokens=tokens, tokens_number=tokens_number, tokenizer=tokenizer)
+        subtoken2token_index = get_token_map_subtoken(
+            subtokens=subtokens, tokens=tokens, tokens_number=tokens_number, tokenizer=tokenizer)
         if args.upgraded_ast:
             shortest_path_length = get_shortest_path_length_in_tree(u_ast)
         else:
@@ -198,9 +202,11 @@ def generate_ast_dis_translate(filename, tokenizer, args):
         dis_mat = torch.zeros(max_length, max_length)
         for i in range(max_length):
             for j in range(max_length):
-                if subtoken2token_index[i]!=-1 and subtoken2token_index[j]!=-1:
-                    dis_mat[i][j] = shortest_path_length[subtoken2token_index[i]][subtoken2token_index[j]]
+                if subtoken2token_index[i] != -1 and subtoken2token_index[j] != -1:
+                    dis_mat[i][j] = shortest_path_length[subtoken2token_index[i]
+                                                         ][subtoken2token_index[j]]
         torch.save(dis_mat, target_name)
+
 
 def generate_ast_dis_summarize(filename, tokenizer, args):
     data_all = read_summarize_examples(filename=filename, data_num=-1)
@@ -222,12 +228,12 @@ def generate_ast_dis_summarize(filename, tokenizer, args):
         os.makedirs(target_dir)
     for data in tqdm(data_all):
         source_code, idx = data.source, data.idx
-        if args.model_name in ['codet5','t5']:
+        if args.model_name in ['codet5', 't5']:
             if args.task == 'summarize-idx':
                 task = 'summarize'
             elif args.task == 'translate-idx':
                 task = 'translate'
-            source_code="{} {}: {}".format(
+            source_code = "{} {}: {}".format(
                 task, args.sub_task, source_code)
         subtokens = get_subtokens(
             source_code=source_code, tokenizer=tokenizer, max_length=args.max_length)
@@ -239,7 +245,8 @@ def generate_ast_dis_summarize(filename, tokenizer, args):
                          token_number_dict, tokens_type_dict)
         tokens, tokens_number = list(
             token_number_dict.values()), list(token_number_dict.keys())
-        subtoken2token_index = get_token_map_subtoken(subtokens=subtokens, tokens=tokens, tokens_number=tokens_number, tokenizer=tokenizer)
+        subtoken2token_index = get_token_map_subtoken(
+            subtokens=subtokens, tokens=tokens, tokens_number=tokens_number, tokenizer=tokenizer)
         if args.upgraded_ast:
             shortest_path_length = get_shortest_path_length_in_tree(u_ast)
         else:
@@ -249,8 +256,9 @@ def generate_ast_dis_summarize(filename, tokenizer, args):
         dis_mat = torch.zeros(max_length, max_length)
         for i in range(max_length):
             for j in range(max_length):
-                if subtoken2token_index[i]!=-1 and subtoken2token_index[j]!=-1:
-                    dis_mat[i][j] = shortest_path_length[subtoken2token_index[i]][subtoken2token_index[j]]
+                if subtoken2token_index[i] != -1 and subtoken2token_index[j] != -1:
+                    dis_mat[i][j] = shortest_path_length[subtoken2token_index[i]
+                                                         ][subtoken2token_index[j]]
         torch.save(dis_mat, target_name)
 
 
@@ -275,7 +283,7 @@ def main():
 
     filenames = get_filenames(data_root='/mnt/e/data',
                               task=args.task, sub_task=args.sub_task)
-    
+
     if args.task == 'translate-idx':
         split_filenames = []
         for file_pair in filenames:
@@ -287,9 +295,11 @@ def main():
     for fn in filenames:
         if 'train' in fn:
             if args.task == 'summarize-idx':
-                generate_ast_dis_summarize(filename=fn, tokenizer=tokenizer, args=args)
+                generate_ast_dis_summarize(
+                    filename=fn, tokenizer=tokenizer, args=args)
             elif args.task == 'translate-idx':
-                generate_ast_dis_translate(filename=fn, tokenizer=tokenizer, args=args)
+                generate_ast_dis_translate(
+                    filename=fn, tokenizer=tokenizer, args=args)
 
 
 if __name__ == "__main__":
