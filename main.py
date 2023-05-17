@@ -409,7 +409,7 @@ def main():
                         logger.info("Save the patience3 best ppl model into %s", dst_path)
                     logger.info(
                         "Ppl does not decrease for %d epochs", not_loss_dec_cnt)
-                    if all([x > args.patience for x in [not_bleu_em_inc_cnt, not_loss_dec_cnt]]):
+                    if not_bleu_em_inc_cnt > args.patience and not_loss_dec_cnt > 2:
                         early_stop_str = "[%d] Early stop as not_bleu_em_inc_cnt=%d, and not_loss_dec_cnt=%d\n" % (
                             cur_epoch, not_bleu_em_inc_cnt, not_loss_dec_cnt)
                         logger.info(early_stop_str)
@@ -477,7 +477,7 @@ def main():
                             dst_path=output_dir+'/pytorch_model.bin'
                             shutil.copy(src_path, dst_path)
                             logger.info("Save the patience3 best ppl model into %s", dst_path)
-                        if all([x > args.patience for x in [not_bleu_em_inc_cnt, not_loss_dec_cnt]]):
+                        if not_bleu_em_inc_cnt > args.patience and not_loss_dec_cnt > 2:
                             stop_early_str = "[%d] Early stop as not_bleu_em_inc_cnt=%d, and not_loss_dec_cnt=%d\n" % (
                                 cur_epoch, not_bleu_em_inc_cnt, not_loss_dec_cnt)
                             logger.info(stop_early_str)
