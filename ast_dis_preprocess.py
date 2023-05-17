@@ -279,8 +279,9 @@ def main():
     if args.task == 'translate-idx':
         split_filenames = []
         for file_pair in filenames:
-            split = file_pair.split(',')
-            split_filenames += split
+            if 'train' in file_pair:
+                split = file_pair.split(',')
+                split_filenames += split
         filenames = split_filenames
 
     print('filenames', filenames)
