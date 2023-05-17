@@ -390,31 +390,7 @@ def main():
                             "Save the best ppl model into %s", output_model_file)
                 else:
                     not_loss_dec_cnt += 1
-                    if not_bleu_em_inc_cnt > 2 and not_loss_dec_cnt > 2  and first_not_inc_cnt_3_flag == 0:
-                        first_not_inc_cnt_3_flag = 1
-                        output_dir = os.path.join(args.output_dir, 'checkpoint-best-bleu-patience3')
-                        if not os.path.exists(output_dir):
-                            os.makedirs(output_dir)
-                        src_path=os.path.join(args.output_dir, 'checkpoint-best-bleu/pytorch_model.bin')
-                        dst_path=output_dir+'/pytorch_model.bin'
-                        shutil.copy(src_path, dst_path)
-                        logger.info("Save the patience3 best bleu model into %s", dst_path)
 
-                        output_dir = os.path.join(args.output_dir, 'checkpoint-best-ppl-patience3')
-                        if not os.path.exists(output_dir):
-                            os.makedirs(output_dir)
-                        src_path=os.path.join(args.output_dir, 'checkpoint-best-ppl/pytorch_model.bin')
-                        dst_path=output_dir+'/pytorch_model.bin'
-                        shutil.copy(src_path, dst_path)
-                        logger.info("Save the patience3 best ppl model into %s", dst_path)
-                    logger.info(
-                        "Ppl does not decrease for %d epochs", not_loss_dec_cnt)
-                    if not_bleu_em_inc_cnt > args.patience and not_loss_dec_cnt > 2:
-                        early_stop_str = "[%d] Early stop as not_bleu_em_inc_cnt=%d, and not_loss_dec_cnt=%d\n" % (
-                            cur_epoch, not_bleu_em_inc_cnt, not_loss_dec_cnt)
-                        logger.info(early_stop_str)
-                        fa.write(early_stop_str)
-                        break
                 logger.info("***** CUDA.empty_cache() *****")
                 torch.cuda.empty_cache()
                 if args.do_eval_bleu:
