@@ -279,17 +279,17 @@ def main():
     if args.task == 'translate-idx':
         split_filenames = []
         for file_pair in filenames:
-            if 'train' in file_pair:
-                split = file_pair.split(',')
-                split_filenames += split
+            split = file_pair.split(',')
+            split_filenames += split
         filenames = split_filenames
 
     print('filenames', filenames)
     for fn in filenames:
-        if args.task == 'summarize-idx':
-            generate_ast_dis_summarize(filename=fn, tokenizer=tokenizer, args=args)
-        elif args.task == 'translate-idx':
-            generate_ast_dis_translate(filename=fn, tokenizer=tokenizer, args=args)
+        if 'train' in fn:
+            if args.task == 'summarize-idx':
+                generate_ast_dis_summarize(filename=fn, tokenizer=tokenizer, args=args)
+            elif args.task == 'translate-idx':
+                generate_ast_dis_translate(filename=fn, tokenizer=tokenizer, args=args)
 
 
 if __name__ == "__main__":
