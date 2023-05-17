@@ -87,8 +87,15 @@ def convert_one_examples_to_features_with_sl(example, tokenizer, example_index, 
     else:
         model_name = args.model_name
     # load the preprocessed features (pt)
-    sl_file = '{}/summarize-idx/{}/{}/{}/{}.pt'.format(args.data_dir,
-                                                       args.lang, model_name, stage, example_index)
+    if args.task in ['summarize-idx']:
+        sl_file = '{}/summarize-idx/{}/{}/{}/{}.pt'.format(args.data_dir,
+                                                           args.lang, model_name, stage, example_index)
+    elif args.task in ['translate-idx']:
+        lang=args.sub_task.split('-')[0]
+        if lang == 'cs':
+            lang = 'c_sharp'
+        sl_file = '{}/translate-idx/{}/{}/{}/{}.pt'.format(args.data_dir,
+                                                           model_name, stage, args.sub_task.split('-')[0], example_index)
     sl_feats = torch.load(sl_file)
     if args.model_name in ['t5', 'codet5'] and args.add_task_prefix:
         if args.sub_task != 'none':
@@ -275,6 +282,7 @@ def read_translate_examples(filename, data_num):
             if idx == data_num:
                 break
     return examples
+
 
 def read_translate_examples_for_genast(filename, data_num):
     """Read examples from filename."""
@@ -659,7 +667,7 @@ def read_examples(filename, data_num, task):
         'refine': read_refine_examples,
         'translate': read_translate_examples,
         'summarize-idx': read_summarize_examples,
-        'translat-idx': read_translate_examples,
+        'translate-idx': read_translate_examples,
         'concode': read_concode_examples,
         'clone': read_clone_examples,
         'defect': read_defect_examples,

@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 def add_args(parser):
     parser.add_argument("--task", type=str, required=True,
-                        choices=['summarize', 'summarize-idx', 'refine', 'translate', 'concode', 'clone', 'defect'])
+                        choices=['summarize', 'summarize-idx', 'refine', 'translate', 'translate-idx', 'concode', 'clone', 'defect'])
     parser.add_argument("--sub_task", type=str, default='')
     parser.add_argument("--lang", type=str, default='')
     parser.add_argument("--add_lang_ids", action='store_true')
@@ -150,7 +150,7 @@ def set_hyperparas(args):
             args.batch_size = 32  # V100
             args.is_sl = True
 
-    elif args.task == 'translate':
+    elif args.task in ['translate','translate-idx']:
         args.adam_epsilon = 1e-8
         args.beam_size = 10
         args.gradient_accumulation_steps = 1
