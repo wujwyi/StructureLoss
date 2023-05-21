@@ -95,7 +95,7 @@ def convert_one_examples_to_features_with_sl(example, tokenizer, example_index, 
         if lang == 'cs':
             lang = 'c_sharp'
         sl_file = '{}/translate-idx/{}/{}/{}/{}.pt'.format(args.data_dir,
-                                                           model_name, stage, args.sub_task.split('-')[0], example_index)
+                                                           model_name, stage, lang, example_index)
     sl_feats = torch.load(sl_file)
     if args.model_name in ['t5', 'codet5'] and args.add_task_prefix:
         if args.sub_task != 'none':
