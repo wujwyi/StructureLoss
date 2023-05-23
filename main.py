@@ -56,9 +56,8 @@ def eval_ppl_epoch(args, eval_data, eval_examples, model, tokenizer):
                 struc_loss = torch.tensor(0.0, device=loss.device)
 
             else:
-                outputs = model(input_ids=source_ids, attention_mask=source_mask,
+                loss, struc_loss = model(input_ids=source_ids, attention_mask=source_mask,
                                 labels=target_ids, decoder_attention_mask=target_mask)
-                loss = outputs.loss
                 struc_loss = torch.tensor(0.0, device=loss.device)
 
         eval_loss += loss.item()

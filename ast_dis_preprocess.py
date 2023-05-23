@@ -237,6 +237,8 @@ def generate_ast_dis_summarize(filename, tokenizer, args):
                 task, args.sub_task, source_code)
         subtokens = get_subtokens(
             source_code=source_code, tokenizer=tokenizer, max_length=args.max_length)
+        if args.lang == 'php':
+            source_code = '<?php'+ source_code
         G = get_traverse_graph(source_code=source_code, lang=args.lang)
         # token_number_dict:    key:Nodes number in the ast tree,    value:token in source code
         T, token_number_dict, tokens_type_dict = get_T_token_number_type(

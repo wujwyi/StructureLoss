@@ -307,7 +307,7 @@ class Codet5WithSL(nn.Module):
             return loss, struc_loss
 
     def generate(self, source_ids, attention_mask, use_cache, num_beams, early_stopping, max_length):
-        return self.t5_model.generate(source_ids, attention_mask, use_cache, num_beams, early_stopping, max_length)
+        return self.t5_model.generate(source_ids, attention_mask=attention_mask, use_cache=use_cache, num_beams=num_beams, early_stopping=early_stopping, max_length=max_length)
 
 
 class Seq2SeqWithSL(nn.Module):
