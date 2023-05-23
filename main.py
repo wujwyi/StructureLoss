@@ -295,6 +295,10 @@ def main():
                                                       target_ids=target_ids, target_mask=target_mask,
                                                       sl_feats=sl_feats, args=args)
                     loss = loss + struc_loss * args.alpha
+                elif args.model_name in ['unixcoder-sl']:
+                    loss, struc_loss, _, _, _ = model(
+                        source_ids=source_ids, target_ids=target_ids,sl_feats=sl_feats, args=args)
+                    loss = loss + struc_loss * args.alpha
 
                 if args.n_gpu > 1:
                     loss = loss.mean()  # mean() to average on multi-gpu.
@@ -435,6 +439,8 @@ def main():
                         not_bleu_em_inc_cnt += 1
                         logger.info(
                             "Bleu does not increase for %d epochs", not_bleu_em_inc_cnt)
+                        if not_bleu_em_inc_cnt > 2 and not_loss_dec_cnt > 2  and first_not_inc_cnt_3_flag != 0:
+                            first_not_inc_cnt_3_flag += 1
                         if not_bleu_em_inc_cnt > 2 and not_loss_dec_cnt > 2  and first_not_inc_cnt_3_flag == 0:
                             first_not_inc_cnt_3_flag = 1
                             output_dir = os.path.join(args.output_dir, 'checkpoint-best-bleu-patience3')
@@ -468,8 +474,11 @@ def main():
     if args.do_test:
         logger.info("  " + "***** Testing *****")
         logger.info("  Batch size = %d", args.batch_size)
-
-        for criteria in ['best-bleu', 'best-ppl', 'last', 'best-bleu-patience3', 'best-ppl-patience3']:  # 'best-bleu', 'best-ppl', 'last'
+        if first_not_inc_cnt_3_flag >= 2:
+            ckpoint_list=['best-bleu', 'best-ppl', 'last']
+        else:
+            ckpoint_list=['best-bleu', 'best-ppl', 'last', 'best-bleu-patience3', 'best-ppl-patience3']
+        for criteria in ckpoint_list:  # 'best-bleu', 'best-ppl', 'last'  # 'best-bleu', 'best-ppl', 'last'
             file = os.path.join(
                 args.output_dir, 'checkpoint-{}/pytorch_model.bin'.format(criteria))
             logger.info("Reload model from {}".format(file))
@@ -491,7 +500,11 @@ def main():
                     f.write(result_str)
 
     if args.always_remove_model:
-        for criteria in ['best-bleu', 'best-ppl', 'last', 'best-bleu-patience3', 'best-ppl-patience3']:  # 'best-bleu', 'best-ppl', 'last'
+        if first_not_inc_cnt_3_flag >= 2:
+            ckpoint_list=['best-bleu', 'best-ppl', 'last']
+        else:
+            ckpoint_list=['best-bleu', 'best-ppl', 'last', 'best-bleu-patience3', 'best-ppl-patience3']
+        for criteria in ckpoint_list:  # 'best-bleu', 'best-ppl', 'last'
             file = os.path.join(
                 args.output_dir, 'checkpoint-{}/pytorch_model.bin'.format(criteria))
             dir_path = os.path.join(

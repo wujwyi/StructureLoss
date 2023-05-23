@@ -144,6 +144,16 @@ def bulid_or_load_gen_model(args):
             sos_id=tokenizer.convert_tokens_to_ids(["<mask0>"])[0],
             eos_id=tokenizer.sep_token_id
         )
+    elif args.model_name in ['unixcoder-sl']:
+        config.is_decoder = True
+        config.output_attentions = True
+        encoder = AutoModel.from_pretrained(checkpoint, config=config)
+        model = Seq2SeqforUnixcoder(
+            encoder=encoder, decoder=encoder, config=config,struc_encoder=struc_encoder,
+            beam_size=args.beam_size, max_length=args.max_target_length,
+            sos_id=tokenizer.convert_tokens_to_ids(["<mask0>"])[0],
+            eos_id=tokenizer.sep_token_id
+        )
     elif args.model_name in ['codet5-sl']:
         config.output_attentions = True
         t5_model = T5ForConditionalGeneration.from_pretrained(
@@ -539,6 +549,120 @@ class Seq2SeqforUnixcoder(nn.Module):
 
         return preds, encoder_attention
 
+class Seq2SeqforUnixcoderWithSL(nn.Module):
+    """
+        Build Seqence-to-Sequence.
+
+        Parameters:
+
+        * `encoder`- encoder of seq2seq model. e.g. roberta
+        * `decoder`- decoder of seq2seq model. e.g. transformer
+        * `config`- configuration of encoder model. 
+        * `beam_size`- beam size for beam search. 
+        * `max_length`- max length of target for beam search. 
+        * `sos_id`- start of symbol ids in target for beam search.
+        * `eos_id`- end of symbol ids in target for beam search. 
+    """
+
+    def __init__(self, encoder, decoder, config, struc_encoder=None, beam_size=None, max_length=None, sos_id=None, eos_id=None):
+        super(Seq2SeqforUnixcoder, self).__init__()
+        self.encoder = encoder
+        self.decoder = decoder
+        self.config = config
+        self.struc_encoder = struc_encoder
+        self.register_buffer(
+            "bias", torch.tril(torch.ones(
+                (1024, 1024), dtype=torch.uint8)).view(1, 1024, 1024)
+        )
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
+        self.lm_head = nn.Linear(
+            config.hidden_size, config.vocab_size, bias=False)
+        self.lm_head.weight = self.encoder.embeddings.word_embeddings.weight
+        self.lsm = nn.LogSoftmax(dim=-1)
+
+        self.beam_size = beam_size
+        self.max_length = max_length
+        self.sos_id = sos_id
+        self.eos_id = eos_id
+
+    def forward(self, source_ids, target_ids=None, args=None, sl_feats=None):
+        if sl_feats is not None:
+            # print('before sl_feats shape', sl_feats.shape)
+            sl_feats = sl_feats.view(
+                source_ids.shape[0], args.max_source_length, args.max_source_length, -1)
+            # print('after sl_feats shape', sl_feats.shape)
+        if target_ids is None:
+            return self.generate(source_ids)
+
+        mask = source_ids.ne(1)[:, None, :]*source_ids.ne(1)[:, :, None]
+        encoder_output = self.encoder(
+            source_ids, attention_mask=mask, use_cache=True)
+        encoder_attention = encoder_output[-1]
+        ids = torch.cat((source_ids, target_ids), -1)
+        mask = self.bias[:,
+                         source_ids.size(-1):ids.size(-1), :ids.size(-1)].bool()
+        mask = mask & ids[:, None, :].ne(1)
+
+        out = self.decoder(target_ids, attention_mask=mask,
+                           past_key_values=encoder_output.past_key_values).last_hidden_state
+        lm_logits = self.lm_head(out)
+        # Shift so that tokens < n predict n
+        active_loss = target_ids[..., 1:].ne(1).view(-1)
+        shift_logits = lm_logits[..., :-1, :].contiguous()
+        shift_labels = target_ids[..., 1:].contiguous()
+        # Flatten the tokens
+        loss_fct = nn.CrossEntropyLoss(ignore_index=-1)
+        loss = loss_fct(shift_logits.view(-1, shift_logits.size(-1))[active_loss],
+                        shift_labels.view(-1)[active_loss])
+        if sl_feats is not None:
+                struc_attention = self.struc_encoder(sl_feats)
+                struc_loss = calculate_attention_difference(
+                    encoder_attention, struc_attention, struc_loss_type=args.struc_loss_type, multi_head_loss=args.multi_head_loss)
+        else:
+            struc_loss = torch.tensor(0.0, device=loss.device)
+        outputs = loss, struc_loss, loss*active_loss.sum(), active_loss.sum(), encoder_attention
+        return outputs
+
+    def generate(self, source_ids):
+        mask = source_ids.ne(1)[:, None, :]*source_ids.ne(1)[:, :, None]
+        encoder_output = self.encoder(
+            source_ids, attention_mask=mask, use_cache=True)
+        encoder_attention = encoder_output[-1]
+        preds = []
+        zero = torch.cuda.LongTensor(1).fill_(0)
+        source_len = list(source_ids.ne(1).sum(-1).cpu().numpy())
+        for i in range(source_ids.shape[0]):
+            context = [[x[i:i+1, :, :source_len[i]].repeat(self.beam_size, 1, 1, 1) for x in y]
+                       for y in encoder_output.past_key_values]
+            beam = Beam(self.beam_size, self.sos_id, self.eos_id)
+            input_ids = beam.getCurrentState()
+            context_ids = source_ids[i:i+1,
+                                     :source_len[i]].repeat(self.beam_size, 1)
+            for _ in range(self.max_length):
+                if beam.done():
+                    break
+
+                ids = torch.cat((context_ids, input_ids), -1)
+                mask = self.bias[:,
+                                 context_ids.size(-1):ids.size(-1), :ids.size(-1)].bool()
+                mask = mask & ids[:, None, :].ne(1)
+                out = self.decoder(input_ids, attention_mask=mask,
+                                   past_key_values=context).last_hidden_state
+                hidden_states = out[:, -1, :]
+                out = self.lsm(self.lm_head(hidden_states)).data
+                beam.advance(out)
+                input_ids.data.copy_(input_ids.data.index_select(
+                    0, beam.getCurrentOrigin()))
+                input_ids = torch.cat((input_ids, beam.getCurrentState()), -1)
+            hyp = beam.getHyp(beam.getFinal())
+            pred = beam.buildTargetTokens(hyp)[:self.beam_size]
+            pred = [torch.cat([x.view(-1) for x in p]+[zero] *
+                              (self.max_length-len(p))).view(1, -1) for p in pred]
+            preds.append(torch.cat(pred, 0).unsqueeze(0))
+
+        preds = torch.cat(preds, 0)
+
+        return preds, encoder_attention
 
 class Beam(object):
     def __init__(self, size, sos, eos):
