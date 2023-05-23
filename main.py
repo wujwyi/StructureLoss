@@ -50,11 +50,14 @@ def eval_ppl_epoch(args, eval_data, eval_examples, model, tokenizer):
                                    'codebert-sl', 'graphcodebert-sl']:
                 loss, struc_loss, _, _, _ = model(source_ids=source_ids, source_mask=source_mask,
                                                   target_ids=target_ids, target_mask=target_mask)
-            elif args.model_name in ['unixcoder', 'unixcoder-sl']:
+            elif args.model_name in ['unixcoder']:
                 loss, _, _, _ = model(
                     source_ids=source_ids, target_ids=target_ids)
                 struc_loss = torch.tensor(0.0, device=loss.device)
-
+            elif args.model_name in ['unixcoder-sl']:
+                loss, struc_loss, _, _, _ = model(
+                    source_ids=source_ids, target_ids=target_ids)
+                struc_loss = torch.tensor(0.0, device=loss.device)
             else:
                 loss, struc_loss = model(input_ids=source_ids, attention_mask=source_mask,
                                 labels=target_ids, decoder_attention_mask=target_mask)
