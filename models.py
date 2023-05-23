@@ -148,7 +148,7 @@ def bulid_or_load_gen_model(args):
         config.is_decoder = True
         config.output_attentions = True
         encoder = AutoModel.from_pretrained(checkpoint, config=config)
-        model = Seq2SeqforUnixcoder(
+        model = Seq2SeqforUnixcoderWithSL(
             encoder=encoder, decoder=encoder, config=config,struc_encoder=struc_encoder,
             beam_size=args.beam_size, max_length=args.max_target_length,
             sos_id=tokenizer.convert_tokens_to_ids(["<mask0>"])[0],
@@ -565,7 +565,7 @@ class Seq2SeqforUnixcoderWithSL(nn.Module):
     """
 
     def __init__(self, encoder, decoder, config, struc_encoder=None, beam_size=None, max_length=None, sos_id=None, eos_id=None):
-        super(Seq2SeqforUnixcoder, self).__init__()
+        super(Seq2SeqforUnixcoderWithSL, self).__init__()
         self.encoder = encoder
         self.decoder = decoder
         self.config = config

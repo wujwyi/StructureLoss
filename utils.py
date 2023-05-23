@@ -79,7 +79,7 @@ def convert_examples_to_features(item):
 
 
 def convert_one_examples_to_features_with_sl(example, tokenizer, example_index, stage, args):
-    if args.model_name in ['codebert-sl', 'roberta-sl', 'graphcodebert-sl']:
+    if args.model_name in ['codebert-sl', 'roberta-sl', 'graphcodebert-sl','unixcoder-sl']:
         if args.upgraded_ast:
             model_name = 'codebert-sl_uast'
         else:
