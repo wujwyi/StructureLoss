@@ -136,7 +136,7 @@ def set_hyperparas(args):
         elif args.model_name in ['unixcoder']:
             # args.batch_size = 128 # A100
             args.batch_size = 40  # V100
-            args.gradient_accumulation_steps = 2
+            # args.gradient_accumulation_steps = 2
         elif args.model_name in ['roberta-sl', 'codebert-sl', 'graphcodebert-sl']:
             # args.batch_size = 128 # A100
             args.batch_size = 44  # V100
