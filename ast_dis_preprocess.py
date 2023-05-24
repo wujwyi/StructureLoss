@@ -33,7 +33,9 @@ MODEL_LOCALS = {
 }
 
 
-def get_subtokens(source_code, tokenizer, max_length):
+def get_subtokens(source_code, tokenizer, max_length, model_name):
+    if model_name in ['unixcoder']:
+        return get_subtokens_unixcoder(source_code, tokenizer, max_length)
     source_ids = tokenizer.encode(
         source_code, max_length=max_length, padding='max_length', truncation=True)
     subtokens = []
@@ -43,6 +45,13 @@ def get_subtokens(source_code, tokenizer, max_length):
     subtokens = format_special_chars(subtokens)
     return subtokens
 
+def get_subtokens_unixcoder(source_code, tokenizer, max_length):
+    source_tokens = tokenizer.tokenize(source_code)[:max_length]
+    source_tokens = [tokenizer.cls_token,"<encoder-decoder>",tokenizer.sep_token,"<mask0>"]+source_tokens+[tokenizer.sep_token]
+    padding_length = max_length - len(source_tokens)
+    source_tokens += [tokenizer.pad_token]*padding_length
+    subtokens = format_special_chars(source_tokens)
+    return subtokens
 
 def get_traverse_graph(source_code, lang):
     LANGUAGE = Language('evaluator/CodeBLEU/parser/my-languages.so', lang)
@@ -83,13 +92,17 @@ def get_token_map_subtoken(subtokens, tokens, tokens_number, tokenizer):
     token_list_output = []
     token_map_dict = {}
     jump_flag = 0
+    pair_flag=0
     for j in range(len(subtokens)):
         if subtokens[j] in ['<s>', '</s>', '<pad>'] or subtokens[j] in tokenizer.additional_special_tokens:
             # the special tokens of tokenizer is not involved in AST tree, we use -1 to tag it
             subtoken_numbers.append(-1)
         else:
             if jump_flag == 1:
-                pos = pos_old + 1
+                if pair_flag == 0:
+                    pos = pos_old
+                else:
+                    pos = pos_old+1
                 jump_flag = 0
             cnt_move = 0
             if pos >= len(tokens):
@@ -109,6 +122,7 @@ def get_token_map_subtoken(subtokens, tokens, tokens_number, tokenizer):
                 # (language like go) it will prevent a combined token
                 # (which pair more than 1 subtoken) append to token_list_output several times
                 token_list_output.append(tokens[pos])
+                pair_flag=1
             subtoken_numbers.append(tokens_number[pos])
             pos_old = pos
     return subtoken_numbers
@@ -236,7 +250,7 @@ def generate_ast_dis_summarize(filename, tokenizer, args):
             source_code = "{} {}: {}".format(
                 task, args.sub_task, source_code)
         subtokens = get_subtokens(
-            source_code=source_code, tokenizer=tokenizer, max_length=args.max_length)
+            source_code=source_code, tokenizer=tokenizer, max_length=args.max_length, model_name=args.model_name)
         if args.lang == 'php':
             source_code = '<?php'+ source_code
         G = get_traverse_graph(source_code=source_code, lang=args.lang)
