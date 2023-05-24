@@ -284,6 +284,7 @@ def main():
                 elif args.model_name in ['unixcoder']:
                     loss, _, _, _ = model(
                         source_ids=source_ids, target_ids=target_ids)
+                    struc_loss = torch.tensor(0.0, device=loss.device)
                 elif args.model_name in ['codet5', 'plbart']:
                     outputs = model(input_ids=source_ids, attention_mask=source_mask,
                                     labels=target_ids, decoder_attention_mask=target_mask)
@@ -461,6 +462,14 @@ def main():
                             dst_path=output_dir+'/pytorch_model.bin'
                             shutil.copy(src_path, dst_path)
                             logger.info("Save the patience3 best ppl model into %s", dst_path)
+
+                            output_dir = os.path.join(args.output_dir, 'checkpoint-last-patience3')
+                            if not os.path.exists(output_dir):
+                                os.makedirs(output_dir)
+                            src_path=os.path.join(args.output_dir, 'checkpoint-last/pytorch_model.bin')
+                            dst_path=output_dir+'/pytorch_model.bin'
+                            shutil.copy(src_path, dst_path)
+                            logger.info("Save the patience3 best ppl model into %s", dst_path)
                         if not_bleu_em_inc_cnt > args.patience and not_loss_dec_cnt > 2:
                             stop_early_str = "[%d] Early stop as not_bleu_em_inc_cnt=%d, and not_loss_dec_cnt=%d\n" % (
                                 cur_epoch, not_bleu_em_inc_cnt, not_loss_dec_cnt)
@@ -478,9 +487,9 @@ def main():
         logger.info("  " + "***** Testing *****")
         logger.info("  Batch size = %d", args.batch_size)
         if first_not_inc_cnt_3_flag >= 2:
-            ckpoint_list=['best-bleu', 'best-ppl', 'last']
+            ckpoint_list=['best-bleu', 'best-ppl', 'last','last-patience3']
         else:
-            ckpoint_list=['best-bleu', 'best-ppl', 'last', 'best-bleu-patience3', 'best-ppl-patience3']
+            ckpoint_list=['best-bleu', 'best-ppl', 'last','last-patience3', 'best-bleu-patience3', 'best-ppl-patience3']
         for criteria in ckpoint_list:  # 'best-bleu', 'best-ppl', 'last'  # 'best-bleu', 'best-ppl', 'last'
             file = os.path.join(
                 args.output_dir, 'checkpoint-{}/pytorch_model.bin'.format(criteria))
@@ -503,11 +512,7 @@ def main():
                     f.write(result_str)
 
     if args.always_remove_model:
-        if first_not_inc_cnt_3_flag >= 2:
-            ckpoint_list=['best-bleu', 'best-ppl', 'last']
-        else:
-            ckpoint_list=['best-bleu', 'best-ppl', 'last', 'best-bleu-patience3', 'best-ppl-patience3']
-        for criteria in ckpoint_list:  # 'best-bleu', 'best-ppl', 'last'
+        for criteria in ['best-bleu', 'best-ppl', 'last','last-patience3', 'best-bleu-patience3', 'best-ppl-patience3']:  # 'best-bleu', 'best-ppl', 'last'
             file = os.path.join(
                 args.output_dir, 'checkpoint-{}/pytorch_model.bin'.format(criteria))
             dir_path = os.path.join(
