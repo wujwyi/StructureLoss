@@ -216,7 +216,7 @@ def main():
             tmp = len(train_data)
             train_sampler = RandomSampler(
                 train_data) if args.local_rank == -1 else DistributedSampler(train_data)
-            train_dataloader = DataLoader(train_data, sampler=train_sampler, batch_size=args.batch_size,
+            train_dataloader = DataLoader(train_data, sampler=train_sampler, batch_size=args.batch_size // args.gradient_accumulation_steps,
                                           num_workers=10, pin_memory=True)
         else:
             train_examples = read_examples(
@@ -231,7 +231,7 @@ def main():
             tmp = len(train_data)
             train_sampler = RandomSampler(
                 train_data) if args.local_rank == -1 else DistributedSampler(train_data)
-            train_dataloader = DataLoader(train_data, sampler=train_sampler, batch_size=args.batch_size,
+            train_dataloader = DataLoader(train_data, sampler=train_sampler, batch_size=args.batch_size // args.gradient_accumulation_steps,
                                           num_workers=4, pin_memory=True)
 
         # Prepare optimizer and schedule (linear warmup and decay)
@@ -254,7 +254,7 @@ def main():
         train_example_num = len(train_data)
         logger.info("***** Running training *****")
         logger.info("  Num examples = %d", train_example_num)
-        logger.info("  Batch size = %d", args.batch_size)
+        logger.info("  Batch size = %d", args.batch_size * args.gradient_accumulation_steps)
         logger.info("  Batch num = %d", math.ceil(
             train_example_num / args.batch_size))
         logger.info("  Num epoch = %d", args.num_train_epochs)

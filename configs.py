@@ -146,7 +146,7 @@ def set_hyperparas(args):
             # args.batch_size = 128 # A100
             args.batch_size = 38  # V100
             args.is_sl = True
-            args.gradient_accumulation_steps = 2
+            # args.gradient_accumulation_steps = 2
         elif args.model_name in ['codet5-sl']:
             # args.batch_size = 128 # A100
             args.batch_size = 32  # V100

@@ -38,6 +38,9 @@ def add_lang_by_task(target_str, task, sub_task):
 def convert_examples_to_features(item):
     example, example_index, tokenizer, args, stage = item
 
+    if args.model_name in ['unixcoder']:
+        return convert_examples_to_features_unixcoder(example, example_index, tokenizer, args, stage)
+
     if args.model_name in ['t5', 'codet5'] and args.add_task_prefix:
         if args.sub_task != 'none':
             source_str = "{} {}: {}".format(
@@ -77,6 +80,34 @@ def convert_examples_to_features(item):
         url=example.url
     )
 
+def convert_examples_to_features_unixcoder(example, example_index, tokenizer, args,stage=None,sl_feats=None):
+    """convert examples to token ids"""
+    #source
+    source_tokens = tokenizer.tokenize(example.source)[:args.max_source_length-5]
+    source_tokens = [tokenizer.cls_token,"<encoder-decoder>",tokenizer.sep_token,"<mask0>"]+source_tokens+[tokenizer.sep_token]
+    source_ids = tokenizer.convert_tokens_to_ids(source_tokens) 
+    padding_length = args.max_source_length - len(source_ids)
+    source_ids += [tokenizer.pad_token_id]*padding_length
+
+    #target
+    if stage=="test":
+        target_tokens = tokenizer.tokenize("None")
+    else:
+        target_tokens = tokenizer.tokenize(example.target)[:args.max_target_length-2]
+    target_tokens = ["<mask0>"] + target_tokens + [tokenizer.sep_token]            
+    target_ids = tokenizer.convert_tokens_to_ids(target_tokens)
+    padding_length = args.max_target_length - len(target_ids)
+    target_ids += [tokenizer.pad_token_id] * padding_length
+    
+    return InputFeatures(
+            example_index,
+            source_ids,
+            target_ids,
+            url=example.url,
+            sl_feats=sl_feats
+        )
+
+
 
 def convert_one_examples_to_features_with_sl(example, tokenizer, example_index, stage, args):
     if args.model_name in ['codebert-sl', 'roberta-sl', 'graphcodebert-sl','unixcoder-sl']:
@@ -97,6 +128,10 @@ def convert_one_examples_to_features_with_sl(example, tokenizer, example_index, 
         sl_file = '{}/translate-idx/{}/{}/{}/{}.pt'.format(args.data_dir,
                                                            model_name, stage, lang, example_index)
     sl_feats = torch.load(sl_file)
+
+    if args.model_name in ['unixcoder']:
+            return convert_examples_to_features_unixcoder(example, example_index, tokenizer, args, stage)
+
     if args.model_name in ['t5', 'codet5'] and args.add_task_prefix:
         if args.sub_task != 'none':
             source_str = "{} {}: {}".format(
