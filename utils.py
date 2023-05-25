@@ -38,10 +38,10 @@ def add_lang_by_task(target_str, task, sub_task):
 def convert_examples_to_features(item):
     example, example_index, tokenizer, args, stage = item
 
-    if args.model_name in ['unixcoder']:
+    if args.model_name in ['unixcoder','unixcoder-sl']:
         return convert_examples_to_features_unixcoder(example, example_index, tokenizer, args, stage)
 
-    if args.model_name in ['t5', 'codet5'] and args.add_task_prefix:
+    if args.model_name in ['t5', 'codet5', 'codet5-sl'] and args.add_task_prefix:
         if args.sub_task != 'none':
             source_str = "{} {}: {}".format(
                 args.task, args.sub_task, example.source)
@@ -130,9 +130,9 @@ def convert_one_examples_to_features_with_sl(example, tokenizer, example_index, 
     sl_feats = torch.load(sl_file)
 
     if args.model_name in ['unixcoder-sl']:
-            return convert_examples_to_features_unixcoder(example, example_index, tokenizer, args, stage, sl_feats)
+        return convert_examples_to_features_unixcoder(example, example_index, tokenizer, args, stage, sl_feats)
 
-    if args.model_name in ['t5', 'codet5'] and args.add_task_prefix:
+    if args.model_name in ['t5', 'codet5', 'codet5-sl'] and args.add_task_prefix:
         if args.sub_task != 'none':
             source_str = "{} {}: {}".format(
                 args.task, args.sub_task, example.source)

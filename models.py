@@ -135,14 +135,9 @@ def bulid_or_load_gen_model(args):
         model = BartForConditionalGeneration.from_pretrained(
             checkpoint, config=config)
     elif args.model_name in ['unixcoder']:
-        # config.is_decoder = True
-        # config.output_attentions = True
-        # encoder = AutoModel.from_pretrained(checkpoint, config=config)
-        tokenizer = RobertaTokenizer.from_pretrained(checkpoint)
-        config = RobertaConfig.from_pretrained(checkpoint)
         config.is_decoder = True
         config.output_attentions = True
-        encoder = RobertaModel.from_pretrained(checkpoint,config=config) 
+        encoder = AutoModel.from_pretrained(checkpoint, config=config)
         model = Seq2SeqforUnixcoder(
             encoder=encoder, decoder=encoder, config=config,
             beam_size=args.beam_size, max_length=args.max_target_length,
