@@ -77,6 +77,7 @@ def add_args(parser):
     parser.add_argument("--multi_head_loss", type=int, default=0)
     parser.add_argument("--upgraded_ast", type=int, default=0)
     parser.add_argument("--debug_mode", type=int, default=0)
+    parser.add_argument("--early_patience", type=int, default=1)
     args = parser.parse_args()
     return args
 
@@ -136,6 +137,8 @@ def set_hyperparas(args):
         elif args.model_name in ['unixcoder']:
             # args.batch_size = 128 # A100
             args.batch_size = 40  # V100
+            args.early_patience = 0
+            args.patience = 3
             # args.gradient_accumulation_steps = 2
         elif args.model_name in ['roberta-sl', 'codebert-sl', 'graphcodebert-sl']:
             # args.batch_size = 128 # A100
@@ -146,11 +149,15 @@ def set_hyperparas(args):
             # args.batch_size = 128 # A100
             args.batch_size = 38  # V100
             args.is_sl = True
+            args.early_patience = 0
+            args.patience = 3
             # args.gradient_accumulation_steps = 2
         elif args.model_name in ['codet5-sl']:
             # args.batch_size = 128 # A100
-            args.batch_size = 32  # V100
+            args.batch_size = 64  # V100
+            args.patience = 3
             args.is_sl = True
+            args.early_patience = 0
 
     elif args.task in ['translate','translate-idx']:
         args.adam_epsilon = 1e-8
