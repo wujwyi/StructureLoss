@@ -138,7 +138,7 @@ def set_hyperparas(args):
             # args.batch_size = 128 # A100
             args.batch_size = 40  # V100
             args.early_patience = 0
-            args.patience = 3
+            args.patience = 2
             # args.gradient_accumulation_steps = 2
         elif args.model_name in ['roberta-sl', 'codebert-sl', 'graphcodebert-sl']:
             # args.batch_size = 128 # A100
@@ -150,12 +150,14 @@ def set_hyperparas(args):
             args.batch_size = 38  # V100
             args.is_sl = True
             args.early_patience = 0
-            args.patience = 3
+            args.patience = 2
+            if args.sub_task=='go':
+                args.batch_size = 36
             # args.gradient_accumulation_steps = 2
         elif args.model_name in ['codet5-sl']:
             # args.batch_size = 128 # A100
-            args.batch_size = 64  # V100
-            args.patience = 3
+            args.batch_size = 48  # V100
+            args.patience = 2
             args.is_sl = True
             args.early_patience = 0
 
