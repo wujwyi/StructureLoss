@@ -213,9 +213,13 @@ def main():
             # Prepare training data loader
             train_examples, train_data = load_and_cache_gen_data(
                 args, args.train_filename, pool, tokenizer, 'train')
-            tmp = len(train_data)
-            train_sampler = RandomSampler(
-                train_data) if args.local_rank == -1 else DistributedSampler(train_data)
+            if args.sample_rate < 1:
+                num_samples = int(len(train_examples)*args.sample_rate)
+                train_sampler = RandomSampler(
+                    data_source=train_data, num_samples=num_samples) if args.local_rank == -1 else DistributedSampler(train_data)
+            else:
+                train_sampler = RandomSampler(
+                    train_data) if args.local_rank == -1 else DistributedSampler(train_data)
             train_dataloader = DataLoader(train_data, sampler=train_sampler, batch_size=args.batch_size,
                                           num_workers=10, pin_memory=True)
         else:
@@ -228,9 +232,13 @@ def main():
                 stage='train',
                 only_src=False
             )
-            tmp = len(train_data)
-            train_sampler = RandomSampler(
-                train_data) if args.local_rank == -1 else DistributedSampler(train_data)
+            if args.sample_rate < 1:
+                num_samples = int(len(train_examples)*args.sample_rate)
+                train_sampler = RandomSampler(
+                    data_source=train_data, num_samples=num_samples) if args.local_rank == -1 else DistributedSampler(train_data)
+            else:
+                train_sampler = RandomSampler(
+                    train_data) if args.local_rank == -1 else DistributedSampler(train_data)
             train_dataloader = DataLoader(train_data, sampler=train_sampler, batch_size=args.batch_size,
                                           num_workers=4, pin_memory=True)
 

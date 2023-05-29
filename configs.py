@@ -78,6 +78,7 @@ def add_args(parser):
     parser.add_argument("--upgraded_ast", type=int, default=0)
     parser.add_argument("--debug_mode", type=int, default=0)
     parser.add_argument("--early_patience", type=int, default=1)
+    parser.add_argument("--sample_rate", type=float, default=2.0)
     args = parser.parse_args()
     return args
 
