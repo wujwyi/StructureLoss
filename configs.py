@@ -185,16 +185,16 @@ def set_hyperparas(args):
         elif args.sub_task == 'cs-java':
             args.lang = 'java'
 
-        if args.model_name in ['roberta', 'codebert', 'graphcodebert']:
+        if args.model_name in ['roberta', 'codebert', 'graphcodebert','roberta-sl', 'codebert-sl', 'graphcodebert-sl']:
             # args.batch_size = 128  # A100
-            args.batch_size = 48  # V100
-        elif args.model_name in ['t5', 'codet5']:
+            args.batch_size = 25  # V100
+        elif args.model_name in ['t5', 'codet5', 'codet5-sl']:
             # args.batch_size = 64  # A100
-            args.batch_size = 32
+            args.batch_size = 25
         elif args.model_name in ['bart', 'plbart']:
             # args.batch_size = 128  # A100
             args.batch_size = 48  # V100
-        elif args.model_name in ['unixcoder']:
+        elif args.model_name in ['unixcoder','unixcoder-sl']:
             # args.batch_size = 128  # A100
             args.batch_size = 48  # V100
 
