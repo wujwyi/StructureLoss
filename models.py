@@ -132,6 +132,12 @@ def bulid_or_load_gen_model(args):
         config.output_attentions = True
         model = T5ForConditionalGeneration.from_pretrained(
             checkpoint, config=config)
+    elif args.model_name in ['codet5p-220m','codet5p-770m']:
+        config.output_attentions = True
+        model = AutoModelForSeq2SeqLM.from_pretrained(checkpoint,
+                                                  trust_remote_code=False,  # False for 220m and 770m models
+                                                  torch_dtype=torch.float16,
+                                                  low_cpu_mem_usage=True)
     elif args.model_name in ['codet5-220m', 'codet5-770m']:
         config.output_attentions = True
         model = AutoModelForSeq2SeqLM.from_pretrained(checkpoint,

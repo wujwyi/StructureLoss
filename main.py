@@ -58,7 +58,7 @@ def eval_ppl_epoch(args, eval_data, eval_examples, model, tokenizer):
                 loss, struc_loss, _, _, _ = model(
                     source_ids=source_ids, target_ids=target_ids)
                 struc_loss = torch.tensor(0.0, device=loss.device)
-            elif args.model_name in ['codet5']:
+            elif args.model_name in ['codet5','codet5p-220m','codet5p-770m']:
                 loss = model(input_ids=source_ids, attention_mask=source_mask,
                                 labels=target_ids, decoder_attention_mask=target_mask)
                 struc_loss = torch.tensor(0.0, device=loss.device)
@@ -185,7 +185,7 @@ def eval_bleu_epoch(args, eval_data, eval_examples, model, tokenizer, split_tag,
 
 
 def main():
-    torch.set_float32_matmul_precision('high')
+    # torch.set_float32_matmul_precision('high')
     parser = argparse.ArgumentParser()
     args = add_args(parser)
     t0 = time.time()
@@ -297,7 +297,7 @@ def main():
                     loss, _, _, _ = model(
                         source_ids=source_ids, target_ids=target_ids)
                     struc_loss = torch.tensor(0.0, device=loss.device)
-                elif args.model_name in ['codet5', 'plbart']:
+                elif args.model_name in ['codet5', 'plbart','codet5p-220m','codet5p-770m']:
                     outputs = model(input_ids=source_ids, attention_mask=source_mask,
                                     labels=target_ids, decoder_attention_mask=target_mask)
                     loss = outputs.loss

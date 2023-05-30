@@ -15,7 +15,7 @@ def add_args(parser):
     parser.add_argument("--add_lang_ids", action='store_true')
     # plbart unfinished
     parser.add_argument("--model_name", default="roberta",
-                        type=str, choices=['roberta', 'codebert', 'graphcodebert', 'bart', 'plbart', 't5', 'codet5', 'unixcoder',
+                        type=str, choices=['roberta', 'codebert', 'graphcodebert', 'bart', 'plbart', 't5', 'codet5', 'codet5p-220m', 'codet5p-770m', 'unixcoder',
                                            'roberta-sl', 'codebert-sl', 'graphcodebert-sl', 'unixcoder-sl', 'codet5-sl'])
     parser.add_argument('--seed', type=int, default=1234,
                         help="random seed for initialization")  # previous one 42
@@ -156,6 +156,12 @@ def set_hyperparas(args):
                 args.batch_size = 36
             # args.gradient_accumulation_steps = 2
         elif args.model_name in ['codet5-sl']:
+            # args.batch_size = 128 # A100
+            args.batch_size = 48  # V100
+            args.patience = 2
+            args.is_sl = True
+            args.early_patience = 0
+        elif args.model_name in ['codet5p-220m','codet5p-770m']:
             # args.batch_size = 128 # A100
             args.batch_size = 48  # V100
             args.patience = 2
