@@ -197,7 +197,7 @@ def generate_ast_dis_translate(filename, tokenizer, args):
             source_code = "{} {}: {}".format(
                 task, args.sub_task, source_code)
         subtokens = get_subtokens(
-            source_code=source_code, tokenizer=tokenizer, max_length=args.max_length)
+            source_code=source_code, tokenizer=tokenizer, max_length=args.max_length, model_name=args.model_name)
         G = get_traverse_graph(source_code=source_code, lang=lang)
         # token_number_dict:    key:Nodes number in the ast tree,    value:token in source code
         T, token_number_dict, tokens_type_dict = get_T_token_number_type(
