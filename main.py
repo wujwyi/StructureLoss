@@ -58,6 +58,10 @@ def eval_ppl_epoch(args, eval_data, eval_examples, model, tokenizer):
                 loss, struc_loss, _, _, _ = model(
                     source_ids=source_ids, target_ids=target_ids)
                 struc_loss = torch.tensor(0.0, device=loss.device)
+            elif args.model_name in ['codet5']:
+                loss = model(input_ids=source_ids, attention_mask=source_mask,
+                                labels=target_ids, decoder_attention_mask=target_mask)
+                struc_loss = torch.tensor(0.0, device=loss.device)
             else:
                 loss, struc_loss = model(input_ids=source_ids, attention_mask=source_mask,
                                 labels=target_ids, decoder_attention_mask=target_mask)
@@ -221,7 +225,7 @@ def main():
                 train_sampler = RandomSampler(
                     train_data) if args.local_rank == -1 else DistributedSampler(train_data)
             train_dataloader = DataLoader(train_data, sampler=train_sampler, batch_size=args.batch_size,
-                                          num_workers=10, pin_memory=True)
+                                          num_workers=24, pin_memory=True)
         else:
             train_examples = read_examples(
                 args.train_filename, args.data_num, args.task)
@@ -240,7 +244,7 @@ def main():
                 train_sampler = RandomSampler(
                     train_data) if args.local_rank == -1 else DistributedSampler(train_data)
             train_dataloader = DataLoader(train_data, sampler=train_sampler, batch_size=args.batch_size,
-                                          num_workers=4, pin_memory=True)
+                                          num_workers=24, pin_memory=True)
 
         # Prepare optimizer and schedule (linear warmup and decay)
         no_decay = ['bias', 'LayerNorm.weight']

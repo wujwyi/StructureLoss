@@ -4,7 +4,7 @@ import torch.nn.functional as F
 import numpy as np
 import logging
 
-from transformers import AutoTokenizer, AutoModel, AutoConfig, T5ForConditionalGeneration, BartForConditionalGeneration,RobertaConfig, RobertaModel, RobertaTokenizer
+from transformers import AutoTokenizer, AutoModel, AutoConfig, T5ForConditionalGeneration, BartForConditionalGeneration,AutoModelForSeq2SeqLM
 from geomloss import SamplesLoss
 from utils import format_attention
 
@@ -26,6 +26,8 @@ MODEL_LOCALS = {
     'graphcodebert':  HUGGINGFACE_LOCALS + 'graphcodebert-base',
     't5':  HUGGINGFACE_LOCALS + 't5-base',
     'codet5':  HUGGINGFACE_LOCALS + 'codet5-base',
+    'codet5p-220m':  HUGGINGFACE_LOCALS + 'codet5p-220m',
+    'codet5p-770m':  HUGGINGFACE_LOCALS + 'codet5p-770m',
     'bart':  HUGGINGFACE_LOCALS + 'bart-base',
     'plbart':  HUGGINGFACE_LOCALS + 'plbart-base',
     'unixcoder': HUGGINGFACE_LOCALS + 'unixcoder-base',
@@ -130,6 +132,12 @@ def bulid_or_load_gen_model(args):
         config.output_attentions = True
         model = T5ForConditionalGeneration.from_pretrained(
             checkpoint, config=config)
+    elif args.model_name in ['codet5-220m', 'codet5-770m']:
+        config.output_attentions = True
+        model = AutoModelForSeq2SeqLM.from_pretrained(checkpoint,
+                                                  trust_remote_code=False,  # False for 220m and 770m models
+                                                  torch_dtype=torch.float16,
+                                                  low_cpu_mem_usage=True)
     elif args.model_name in ['bart', 'plbart']:
         config.output_attentions = True
         model = BartForConditionalGeneration.from_pretrained(
@@ -158,6 +166,13 @@ def bulid_or_load_gen_model(args):
         config.output_attentions = True
         t5_model = T5ForConditionalGeneration.from_pretrained(
             checkpoint, config=config)
+        model = Codet5WithSL(t5_model=t5_model, struc_encoder=struc_encoder)
+    elif args.model_name in ['codet5-220m-sl', 'codet5-770m-sl']:
+        config.output_attentions = True
+        t5_model = AutoModelForSeq2SeqLM.from_pretrained(checkpoint,
+                                                  trust_remote_code=False,  # False for 220m and 770m models
+                                                  torch_dtype=torch.float16,
+                                                  low_cpu_mem_usage=True)
         model = Codet5WithSL(t5_model=t5_model, struc_encoder=struc_encoder)
     elif args.model_name in ['roberta-sl', 'codebert-sl', 'graphcodebert-sl']:
         config.output_attentions = True
