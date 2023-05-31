@@ -112,10 +112,11 @@ def bulid_or_load_gen_model(args):
     config = AutoConfig.from_pretrained(checkpoint)
     tokenizer = AutoTokenizer.from_pretrained(checkpoint)
 
-    # if 'sl' in args.model_name:
-    #     struc_encoder = StrucEncoder(args=args)
-
-    struc_encoder = StrucEncoder(args=args)
+    if 'summarize' in args.task:
+        struc_encoder = StrucEncoder(args=args)
+    else:
+        if 'sl' in args.model_name:
+            struc_encoder = StrucEncoder(args=args)
 
     if args.model_name in ['roberta', 'codebert', 'graphcodebert']:
         config.output_attentions = True
