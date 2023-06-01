@@ -172,11 +172,11 @@ def set_hyperparas(args):
         args.adam_epsilon = 1e-8
         args.beam_size = 10
         args.gradient_accumulation_steps = 1
-        args.lr = 5e-5
+        args.lr = 2e-5
         args.max_source_length = 320
         args.max_target_length = 256
-        args.num_train_epochs = 100
-        args.patience = 5
+        args.num_train_epochs = 50
+        args.patience = 20
         args.weight_decay = 0.0
         args.warmup_steps = 1000
 
@@ -187,10 +187,10 @@ def set_hyperparas(args):
 
         if args.model_name in ['roberta', 'codebert', 'graphcodebert','roberta-sl', 'codebert-sl', 'graphcodebert-sl']:
             # args.batch_size = 128  # A100
-            args.batch_size = 25  # V100
+            args.batch_size = 32  # V100
         elif args.model_name in ['t5', 'codet5', 'codet5-sl']:
             # args.batch_size = 64  # A100
-            args.batch_size = 25
+            args.batch_size = 16
         elif args.model_name in ['bart', 'plbart']:
             # args.batch_size = 128  # A100
             args.batch_size = 48  # V100
