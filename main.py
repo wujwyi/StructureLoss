@@ -59,8 +59,9 @@ def eval_ppl_epoch(args, eval_data, eval_examples, model, tokenizer):
                     source_ids=source_ids, target_ids=target_ids)
                 struc_loss = torch.tensor(0.0, device=loss.device)
             elif args.model_name in ['codet5','codet5p-220m','codet5p-770m']:
-                loss = model(input_ids=source_ids, attention_mask=source_mask,
+                output = model(input_ids=source_ids, attention_mask=source_mask,
                                 labels=target_ids, decoder_attention_mask=target_mask)
+                loss = output.loss
                 struc_loss = torch.tensor(0.0, device=loss.device)
             else:
                 loss, struc_loss = model(input_ids=source_ids, attention_mask=source_mask,
@@ -185,7 +186,7 @@ def eval_bleu_epoch(args, eval_data, eval_examples, model, tokenizer, split_tag,
 
 
 def main():
-    torch.set_float32_matmul_precision('high')
+    # torch.set_float32_matmul_precision('high')
     parser = argparse.ArgumentParser()
     args = add_args(parser)
     t0 = time.time()
@@ -424,8 +425,8 @@ def main():
                     elif args.task in ['defect']:
                         dev_bleu_em = dev_em
                     else:
-                        # dev_bleu_em = dev_bleu + dev_em
-                        dev_bleu_em = dev_bleu
+                        dev_bleu_em = dev_bleu + dev_em
+                        # dev_bleu_em = dev_bleu
                     if args.data_num == -1:
                         tb_writer.add_scalar(
                             'dev_bleu_em', dev_bleu_em, cur_epoch)

@@ -119,7 +119,7 @@ def set_hyperparas(args):
         args.lr = 5e-5
         args.max_source_length = 256
         args.max_target_length = 128
-        args.num_train_epochs = 100
+        args.num_train_epochs = 60
         # args.num_train_epochs = 15 # will not early stop on some datasets if the number of training epochs is too small
         args.patience = 5
         args.weight_decay = 0.0
@@ -129,6 +129,7 @@ def set_hyperparas(args):
         if args.model_name in ['roberta', 'codebert', 'graphcodebert']:
             # args.batch_size = 128 # A100
             args.batch_size = 48  # V100
+            args.patience = 3
         elif args.model_name in ['t5', 'codet5']:
             # args.batch_size = 64 # A100
             args.batch_size = 32
@@ -145,6 +146,7 @@ def set_hyperparas(args):
             # args.batch_size = 128 # A100
             args.batch_size = 44  # V100
             args.is_sl = True
+            args.patience = 5
             # args.data_num = 1000
         elif args.model_name in ['unixcoder-sl']:
             # args.batch_size = 128 # A100
@@ -175,7 +177,7 @@ def set_hyperparas(args):
         args.lr = 2e-5
         args.max_source_length = 320
         args.max_target_length = 256
-        args.num_train_epochs = 50
+        args.num_train_epochs = 100
         args.patience = 20
         args.weight_decay = 0.0
         args.warmup_steps = 1000
@@ -188,15 +190,16 @@ def set_hyperparas(args):
         if args.model_name in ['roberta', 'codebert', 'graphcodebert','roberta-sl', 'codebert-sl', 'graphcodebert-sl']:
             # args.batch_size = 128  # A100
             args.batch_size = 32  # V100
+            args.lr = 1e-4
         elif args.model_name in ['t5', 'codet5', 'codet5-sl']:
             # args.batch_size = 64  # A100
-            args.batch_size = 16
+            args.batch_size = 8
         elif args.model_name in ['bart', 'plbart']:
             # args.batch_size = 128  # A100
             args.batch_size = 48  # V100
         elif args.model_name in ['unixcoder','unixcoder-sl']:
             # args.batch_size = 128  # A100
-            args.batch_size = 48  # V100
+            args.batch_size = 16  # V100
 
     if args.debug_mode:
         args.batch_size = 16
