@@ -10,13 +10,13 @@ from utils import format_attention
 
 logger = logging.getLogger(__name__)
 
-# MODEL_CHECKPOINTS = {'roberta': 'roberta-base',
-#                      'codebert': 'microsoft/codebert-base',
-#                      'graphcodebert': 'microsoft/graphcodebert-base',
-#                      't5': 't5-base',
-#                      'codet5': 'Salesforce/codet5-base',
-#                      'bart': 'facebook/bart-base',
-#                      'plbart': 'uclanlp/plbart-base'}
+MODEL_CHECKPOINTS = {'roberta': 'roberta-base',
+                     'codebert': 'microsoft/codebert-base',
+                     'graphcodebert': 'microsoft/graphcodebert-base',
+                     't5': 't5-base',
+                     'codet5': 'Salesforce/codet5-base',
+                     'bart': 'facebook/bart-base',
+                     'plbart': 'uclanlp/plbart-base'}
 
 
 HUGGINGFACE_LOCALS = '../huggingface-models/'
@@ -101,14 +101,13 @@ def get_model_size(model):
 
 
 def bulid_or_load_gen_model(args):
-    # checkpoint = MODEL_CHECKPOINTS[args.model_name]
-
     if 'sl' in args.model_name:
         model_name = args.model_name.strip('-sl')
     else:
         model_name = args.model_name
 
-    checkpoint = MODEL_LOCALS[model_name]
+    # checkpoint = MODEL_LOCALS[model_name]
+    checkpoint = MODEL_CHECKPOINTS[args.model_name]
     config = AutoConfig.from_pretrained(checkpoint)
     tokenizer = AutoTokenizer.from_pretrained(checkpoint)
 
