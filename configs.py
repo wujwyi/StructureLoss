@@ -120,55 +120,32 @@ def set_hyperparas(args):
         args.max_source_length = 256
         args.max_target_length = 128
         args.num_train_epochs = 60
-        # args.num_train_epochs = 15 # will not early stop on some datasets if the number of training epochs is too small
         args.patience = 5
         args.weight_decay = 0.0
         args.warmup_steps = 1000
         args.lang = args.sub_task
 
         if args.model_name in ['roberta', 'codebert', 'graphcodebert']:
-            # args.batch_size = 128 # A100
-            args.batch_size = 48  # V100
-            args.patience = 3
+            args.batch_size = 48
         elif args.model_name in ['t5', 'codet5']:
-            # args.batch_size = 64 # A100
             args.batch_size = 32
         elif args.model_name in ['bart', 'plbart']:
-            # args.batch_size = 128 # A100
-            args.batch_size = 48  # V100
+            args.batch_size = 48
         elif args.model_name in ['unixcoder']:
-            # args.batch_size = 128 # A100
-            args.batch_size = 40  # V100
-            args.early_patience = 0
-            args.patience = 2
-            # args.gradient_accumulation_steps = 2
+            args.batch_size = 48
         elif args.model_name in ['roberta-sl', 'codebert-sl', 'graphcodebert-sl']:
-            # args.batch_size = 128 # A100
-            args.batch_size = 44  # V100
+            args.batch_size = 44
             args.is_sl = True
             args.patience = 5
-            # args.data_num = 1000
         elif args.model_name in ['unixcoder-sl']:
-            # args.batch_size = 128 # A100
-            args.batch_size = 38  # V100
+            args.batch_size = 38
             args.is_sl = True
-            args.early_patience = 0
-            args.patience = 2
-            if args.sub_task=='go':
-                args.batch_size = 36
-            # args.gradient_accumulation_steps = 2
         elif args.model_name in ['codet5-sl']:
-            # args.batch_size = 128 # A100
-            args.batch_size = 48  # V100
-            args.patience = 2
+            args.batch_size = 48
             args.is_sl = True
-            args.early_patience = 0
         elif args.model_name in ['codet5p-220m','codet5p-770m']:
-            # args.batch_size = 128 # A100
-            args.batch_size = 48  # V100
-            args.patience = 2
+            args.batch_size = 48
             args.is_sl = True
-            args.early_patience = 0
 
     elif args.task in ['translate','translate-idx']:
         args.adam_epsilon = 1e-8
@@ -178,7 +155,7 @@ def set_hyperparas(args):
         args.max_source_length = 320
         args.max_target_length = 256
         args.num_train_epochs = 100
-        args.patience = 20
+        args.patience = 30
         args.weight_decay = 0.0
         args.warmup_steps = 1000
 
@@ -188,18 +165,11 @@ def set_hyperparas(args):
             args.lang = 'java'
 
         if args.model_name in ['roberta', 'codebert', 'graphcodebert','roberta-sl', 'codebert-sl', 'graphcodebert-sl']:
-            # args.batch_size = 128  # A100
-            args.batch_size = 32  # V100
+            args.batch_size = 32 
             args.lr = 1e-4
         elif args.model_name in ['t5', 'codet5', 'codet5-sl']:
-            # args.batch_size = 64  # A100
             args.batch_size = 8
         elif args.model_name in ['bart', 'plbart']:
-            # args.batch_size = 128  # A100
-            args.batch_size = 48  # V100
+            args.batch_size = 48 
         elif args.model_name in ['unixcoder','unixcoder-sl']:
-            # args.batch_size = 128  # A100
-            args.batch_size = 16  # V100
-
-    if args.debug_mode:
-        args.batch_size = 16
+            args.batch_size = 16  
