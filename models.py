@@ -107,7 +107,7 @@ def bulid_or_load_gen_model(args):
         model_name = args.model_name
 
     # checkpoint = MODEL_LOCALS[model_name]
-    checkpoint = MODEL_CHECKPOINTS[args.model_name]
+    checkpoint = MODEL_CHECKPOINTS[model_name]
     config = AutoConfig.from_pretrained(checkpoint)
     tokenizer = AutoTokenizer.from_pretrained(checkpoint)
 
